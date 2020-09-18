@@ -16,7 +16,9 @@ rustflags = [
 ```
 
 NOTE that if you were using GNU `ld` or GNU `gcc` to link your program then this
-won't work
+won't work. Support for other linkers is tracked in [issue #1]
+
+[issue #1]: https://github.com/knurling-rs/flip-link/issues/1
 
 ## Support
 
