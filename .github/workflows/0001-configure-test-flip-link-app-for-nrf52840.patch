@@ -1,0 +1,66 @@
+From 63a78c5c32d4003bb21c7af03354015da04fabd7 Mon Sep 17 00:00:00 2001
+From: Lotte Steenbrink <lotte.steenbrink@ferrous-systems.com>
+Date: Tue, 22 Sep 2020 15:32:45 +0200
+Subject: [PATCH] configure test-flip-link-app for nrf52840
+
+---
+ .cargo/config.toml | 7 ++++---
+ Cargo.toml         | 2 +-
+ src/lib.rs         | 2 +-
+ 3 files changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/.cargo/config.toml b/.cargo/config.toml
+index a6fd2d5..44cf970 100644
+--- a/.cargo/config.toml
++++ b/.cargo/config.toml
+@@ -1,7 +1,8 @@
+ [target.'cfg(all(target_arch = "arm", target_os = "none"))']
+ # TODO(2) replace `$CHIP` with your chip's name (see `probe-run --list-chips` output)
+-runner = "probe-run --chip $CHIP --defmt"
++runner = "probe-run --chip --chip nRF52840_xxAA --defmt"
+ rustflags = [
++  "-C", "linker=flip-link",
+   "-C", "link-arg=-Tlink.x",
+   "-C", "link-arg=-Tdefmt.x",
+ ]
+@@ -10,9 +11,9 @@ rustflags = [
+ # TODO(3) Adjust the compilation target.
+ # (`thumbv6m-*` is compatible with all ARM Cortex-M chips but using the right
+ # target improves performance)
+-target = "thumbv6m-none-eabi"    # Cortex-M0 and Cortex-M0+
++# target = "thumbv6m-none-eabi"    # Cortex-M0 and Cortex-M0+
+ # target = "thumbv7m-none-eabi"    # Cortex-M3
+-# target = "thumbv7em-none-eabi"   # Cortex-M4 and Cortex-M7 (no FPU)
++target = "thumbv7em-none-eabi"   # Cortex-M4 and Cortex-M7 (no FPU)
+ # target = "thumbv7em-none-eabihf" # Cortex-M4F and Cortex-M7F (with FPU)
+ 
+ [alias]
+diff --git a/Cargo.toml b/Cargo.toml
+index ef9c14d..7df7789 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -24,7 +24,7 @@ branch = "main"
+ cortex-m = "0.6.3"
+ cortex-m-rt = "0.6.12"
+ # TODO(4) enter your HAL here
+-# some-hal = "1.2.3"
++nrf52840-hal = "0.11.0"
+ 
+ [features]
+ # set logging levels here
+diff --git a/src/lib.rs b/src/lib.rs
+index 52eb1bc..3c46ef9 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -5,7 +5,7 @@ use core::sync::atomic::{AtomicUsize, Ordering};
+ use defmt_rtt as _; // global logger
+ use panic_probe as _;
+ // TODO(5) adjust HAL import
+-// use some_hal as _; // memory layout
++use nrf52840_hal as _; // memory layout
+ 
+ #[defmt::timestamp]
+ fn timestamp() -> u64 {
+-- 
+2.25.1
+

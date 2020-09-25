@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [ main]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+  APPNAME : test-flip-link-app
+  CORE_TARGET: thumbv7em-none-eabi # needed by `core`
+  NRF_TARGET: thumbv7em-none-eabihf
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        rust:
+          - stable
+          #- nightly
+        os:
+          - ubuntu-latest
+          # FIXME: Reenable macOS, Windows, and nightly
+          #- macOS-latest
+          #- windows-latest
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: ${{ matrix.rust }}
+        override: true
+    - name: Build
+      run: RUSTFLAGS='--deny warnings' cargo build
+      shell: bash
+    - name: Check fmt
+      if: matrix.os == 'ubuntu-latest' # we only need to check fmt on one OS
+      run: cargo fmt --all -- --check
+
+  build_app:
+    strategy:
+      matrix:
+        rust:
+          - stable
+          #- nightly
+        os:
+          - ubuntu-latest
+          # FIXME: enable macOS, Windows, and nightly
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+          target: ${{ env.NRF_TARGET }}
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install libssl-dev
+          rustup target add ${{ env.CORE_TARGET }}
+          cargo install cargo-generate
+          cargo install --debug --path .
+      - name: Generate and configure App
+        run: |
+          cargo generate --git https://github.com/knurling-rs/app-template --branch main --name ${{ env.APPNAME }}
+          cd ${{ env.APPNAME }}
+          git apply ../.github/workflows/0001-configure-test-flip-link-app-for-nrf52840.patch
+      - name: Build App
+        run: |
+          cd ${{ env.APPNAME }}
+          cargo build --bins
