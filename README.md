@@ -2,6 +2,16 @@
 
 > adds zero-cost stack overflow protection to your embedded programs
 
+## Installation
+
+`flip-link` is currently only available from this git repository. To install it, run
+
+```console
+$ cargo install \
+    --git https://github.com/knurling-rs/flip-link \
+    --branch main
+```
+
 ## Usage
 
 Change the linker from `rust-lld` (the default) to `flip-link` in `.cargo/config.toml`
