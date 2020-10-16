@@ -5,7 +5,7 @@
 ## Architecture support
 
 `flip-link` is known to work with ARM Cortex-M programs that link to version `0.6.x` of the [`cortex-m-rt`] crate and are linked using the linker shipped with the Rust toolchain (LLD).
-At this time, it hasn't been tested with other architecture or runtime crates.
+At this time, it hasn't been tested with other architectures or runtime crates.
 
 [`cortex-m-rt`]: https://crates.io/crates/cortex-m-rt
 
