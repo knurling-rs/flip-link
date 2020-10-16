@@ -2,14 +2,21 @@
 
 > adds zero-cost stack overflow protection to your embedded programs
 
+## Architecture support
+
+`flip-link` is known to work with ARM Cortex-M programs that link to version `0.6.x` of the [`cortex-m-rt`] crate and are linked using the linker shipped with the Rust toolchain (LLD).
+At this time, it hasn't been tested with other architecture or runtime crates.
+
+[`cortex-m-rt`]: https://crates.io/crates/cortex-m-rt
+
 ## Installation
 
-`flip-link` is currently only available from this git repository. To install it, run
+`flip-link` is available on [crates.io]. To install it, run
+
+[crates.io]: https://crates.io/crates/flip-link
 
 ```console
-$ cargo install \
-    --git https://github.com/knurling-rs/flip-link \
-    --branch main
+$ cargo install flip-link
 ```
 
 ## Usage
@@ -26,7 +33,7 @@ rustflags = [
 ```
 
 NOTE that if you were using GNU `ld` or GNU `gcc` to link your program then this
-won't work. Support for other linkers is tracked in [issue #1]
+won't work. Support for other linkers is being tracked in [issue #1]
 
 [issue #1]: https://github.com/knurling-rs/flip-link/issues/1
 

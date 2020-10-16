@@ -1,8 +1,12 @@
 [package]
 authors = ["The Knurling-rs developers"]
+categories = ["command-line-utilities", "development-tools", "embedded"]
+description = "Flips the memory layout of embedded programs to protect against stack overflows"
 edition = "2018"
+keywords = ["arm", "cortex-m", "stack-protection"]
 license = "MIT OR Apache-2.0"
 name = "flip-link"
+repository = "https://github.com/knurling-rs/flip-link"
 version = "0.1.0"
 
 [dependencies]
