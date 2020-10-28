@@ -39,8 +39,9 @@ jobs:
       run: RUSTFLAGS='--deny warnings' cargo build
       shell: bash
     - name: Check fmt
-      if: matrix.os == 'ubuntu-latest' # we only need to check fmt on one OS
-      # nightly doesn't come with rustfmt so make sure it is installed
+      # we only need to check fmt on one OS and
+      # fmt should only be checked on stable
+      if: matrix.os == 'ubuntu-latest' && matrix.rust == 'stable'
       run: |
         rustup component add rustfmt
         cargo fmt --all -- --check
