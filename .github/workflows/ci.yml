@@ -11,7 +11,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   APP_NAME : test-flip-link-app
-  CORE_TARGET: thumbv7em-none-eabi # needed by `core`
+  CORE_TARGET: thumbv7m-none-eabi # needed by `core`
 
 jobs:
   test:
