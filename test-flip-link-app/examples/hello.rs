@@ -1,5 +1,3 @@
-//! Prints "Hello, world!" on the host console using semihosting
-
 #![no_main]
 #![no_std]
 

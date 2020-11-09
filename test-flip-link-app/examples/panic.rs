@@ -1,9 +1,3 @@
-//! Changing the panicking behavior
-//!
-//! The easiest way to change the panicking behavior is to use a different [panic handler crate][0].
-//!
-//! [0]: https://crates.io/keywords/panic-impl
-
 #![no_main]
 #![no_std]
 
