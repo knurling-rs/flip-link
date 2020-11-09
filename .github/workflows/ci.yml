@@ -10,7 +10,6 @@ on:
     - cron: '1 0 * * *'
 env:
   CARGO_TERM_COLOR: always
-  REPO_NAME : flip-link
   APP_NAME : test-flip-link-app
   CORE_TARGET: thumbv7em-none-eabi # needed by `core`
 
@@ -60,8 +59,6 @@ jobs:
     steps:
       - name: Check out flip-link repo
         uses: actions/checkout@v2
-        with:
-          path: ${{ env.REPO_NAME }}
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -70,7 +67,7 @@ jobs:
           target: ${{ env.CORE_TARGET }}
       - name: Install dependencies
         run: |
-          cargo install --debug --path ${{ env.REPO_NAME }}
+          cargo install --debug --path .
       - name: Build App
         run: |
           cd ${{ env.APP_NAME }}
