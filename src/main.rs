@@ -58,7 +58,7 @@ fn notmain() -> Result<i32, anyhow::Error> {
     let (ram_linker_script, ram_entry) = if let Some((path, entry)) = ram_path_entry {
         (path, entry)
     } else {
-        bail!("MEMORY.RAM found after scanning linker scripts");
+        bail!("MEMORY.RAM not found after scanning linker scripts");
     };
 
     let elf = fs::read(output_path)?;
@@ -330,32 +330,39 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
         line = eat!(line, "LENGTH");
         line = eat!(line, "=");
 
-        let boundary_pos = line.find(|c| c == 'K' || c == 'M').unwrap_or(line.len());
-        let mut length: u32 = tryc!(line[..boundary_pos].parse().ok());
-        line = &line[boundary_pos..];
-        let mut chars = line.chars();
-        let unit = chars.next();
-        if unit == Some('K') {
-            length *= 1024;
-        } else if unit == Some('M') {
-            length *= 1024 * 1024;
+        let segments: Vec<&str> = line.split('+').map(|s| s.trim().trim_end()).collect();
+        let mut total_length = 0;
+        for segment in segments {
+            let boundary_pos = segment
+                .find(|c| c == 'K' || c == 'M')
+                .unwrap_or(segment.len());
+            let mut length: u32 = tryc!(segment[..boundary_pos].parse().ok());
+            let raw = &segment[boundary_pos..];
+            let mut chars = raw.chars();
+            let unit = chars.next();
+            if unit == Some('K') {
+                total_length += length * 1024;
+            } else if unit == Some('M') {
+                total_length += length * 1024 * 1024;
+            }
         }
-
-        if chars.next().is_none() {
-            return Some(MemoryEntry {
-                line: index,
-                origin,
-                length,
-            });
-        }
+        return Some(MemoryEntry {
+            line: index,
+            origin,
+            length: total_length,
+        });
     }
 
     None
 }
 
-#[test]
-fn parse() {
-    const LINKER_SCRIPT: &str = "MEMORY
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse() {
+        const LINKER_SCRIPT: &str = "MEMORY
 {
   FLASH : ORIGIN = 0x00000000, LENGTH = 256K
   RAM : ORIGIN = 0x20000000, LENGTH = 64K
@@ -364,17 +371,44 @@ fn parse() {
 INCLUDE device.x
 ";
 
-    assert_eq!(
-        find_ram_in_linker_script(LINKER_SCRIPT),
-        Some(MemoryEntry {
-            line: 3,
-            origin: 0x20000000,
-            length: 64 * 1024,
-        })
-    );
+        assert_eq!(
+            find_ram_in_linker_script(LINKER_SCRIPT),
+            Some(MemoryEntry {
+                line: 3,
+                origin: 0x20000000,
+                length: 64 * 1024,
+            })
+        );
 
-    assert_eq!(
-        get_includes_from_linker_script(LINKER_SCRIPT),
-        vec!["device.x"]
-    );
+        assert_eq!(
+            get_includes_from_linker_script(LINKER_SCRIPT),
+            vec!["device.x"]
+        );
+    }
+
+    #[test]
+    fn parse_plus() {
+        const LINKER_SCRIPT: &str = "MEMORY
+{
+  FLASH : ORIGIN = 0x08000000, LENGTH = 2M
+  RAM : ORIGIN = 0x20020000, LENGTH = 368K + 16K
+}
+
+INCLUDE device.x
+";
+
+        assert_eq!(
+            find_ram_in_linker_script(LINKER_SCRIPT),
+            Some(MemoryEntry {
+                line: 3,
+                origin: 0x20020000,
+                length: (368 + 16) * 1024,
+            })
+        );
+
+        assert_eq!(
+            get_includes_from_linker_script(LINKER_SCRIPT),
+            vec!["device.x"]
+        );
+    }
 }
