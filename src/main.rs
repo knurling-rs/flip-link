@@ -314,8 +314,9 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
         line = line.trim();
         line = eat!(line, "RAM");
 
-        while !line.starts_with(":") {
-            line = line[1..].trim()
+        // jump over attributes like (xrw) see parse_attributes()
+        if let Some(i) = line.find(":") {
+            line = line[i..].trim();
         }
 
         line = eat!(line, ":");
@@ -416,8 +417,10 @@ INCLUDE device.x
             vec!["device.x"]
         );
     }
+
+    // test attributes https://sourceware.org/binutils/docs/ld/MEMORY.html
     #[test]
-    fn parse_flags() {
+    fn parse_attributes() {
         const LINKER_SCRIPT: &str = "MEMORY
 {
     /* NOTE 1 K = 1 KiBi = 1024 bytes */
