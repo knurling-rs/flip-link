@@ -313,6 +313,12 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
     for (index, mut line) in linker_script.lines().enumerate() {
         line = line.trim();
         line = eat!(line, "RAM");
+
+        // jump over attributes like (xrw) see parse_attributes()
+        if let Some(i) = line.find(":") {
+            line = line[i..].trim();
+        }
+
         line = eat!(line, ":");
         line = eat!(line, "ORIGIN");
         line = eat!(line, "=");
@@ -409,6 +415,27 @@ INCLUDE device.x
         assert_eq!(
             get_includes_from_linker_script(LINKER_SCRIPT),
             vec!["device.x"]
+        );
+    }
+
+    // test attributes https://sourceware.org/binutils/docs/ld/MEMORY.html
+    #[test]
+    fn parse_attributes() {
+        const LINKER_SCRIPT: &str = "MEMORY
+{
+    /* NOTE 1 K = 1 KiBi = 1024 bytes */
+    FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 1024K
+    RAM (xrw)  : ORIGIN = 0x20000000, LENGTH = 128K
+}
+";
+
+        assert_eq!(
+            find_ram_in_linker_script(LINKER_SCRIPT),
+            Some(MemoryEntry {
+                line: 4,
+                origin: 0x20000000,
+                length: 128 * 1024,
+            })
         );
     }
 }
