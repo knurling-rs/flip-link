@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.1.2] - 2020-11-26
+
+### Added
+- Add README link to `Cargo.toml`
+
 ## [v0.1.1] - 2020-11-26
 
 ### Fixed
@@ -18,5 +23,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Initial release
 
-[Unreleased]: https://github.com/knurling-rs/flip-link/compare/v0.1.1...main
+[Unreleased]: https://github.com/knurling-rs/flip-link/compare/v0.1.2...main
+[v0.1.2]: https://github.com/knurling-rs/flip-link/compare/v0.1.1...v0.1.2
 [v0.1.1]: https://github.com/knurling-rs/flip-link/compare/v0.1.0...v0.1.1
