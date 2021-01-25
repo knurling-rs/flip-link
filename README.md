@@ -20,7 +20,7 @@ fn main() {
 
 #[inline(never)]
 fn fib(n: u32) -> u32 {
-    // allocate and initialize one kilobyte of stack memory
+    // allocate and initialize 4 kilobytes of stack memory
     let _use_stack = [0xAA; 1024];
 
     if n < 2 {
@@ -50,7 +50,7 @@ If the stack grows too large it collides with the `.bss + .data` region, which c
 
 One potential solution is to change the memory layout of the program and place the stack *below* the `.bss+.data` region.
 
-With this flipped memory layout (pictured below) the stack cannot collide with the static variables. Instead it will collide with the boundary of the physical RAM memory region. In the ARM Cortex-M architecture, trying to read or write pass the boundaries of the RAM region produces a "hardware exception". The `cortex-m-rt` crate provides an API to handle this condition: a `HardFault` exception handler can be defined; this "handler" (function) will be executed when the invalid memory operation is attempted.
+With this flipped memory layout (pictured below) the stack cannot collide with the static variables. Instead it will collide with the boundary of the physical RAM memory region. In the ARM Cortex-M architecture, trying to read or write past the boundaries of the RAM region produces a "hardware exception". The `cortex-m-rt` crate provides an API to handle this condition: a `HardFault` exception handler can be defined; this "handler" (function) will be executed when the invalid memory operation is attempted.
 
 <p align="center">
   <img src="assets/flipped.svg" alt="left: flipped memory layout; right: stack overflow condition">
