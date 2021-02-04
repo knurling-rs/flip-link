@@ -151,18 +151,14 @@ fn notmain() -> Result<i32, anyhow::Error> {
     drop(new_linker_script);
 
     // invoke the linker a second time
-    // we need to patch the arguments to use the new linker script
     let mut args = args;
-    // the *hope* is that by placing our temp dir first in the search path (argument list) the
-    // linker will pick our override rather than the original linker script
-    // also add the temp dir to the search path
-    // HACK `-L` needs to go after `-flavor gnu`; position is currently hardcoded
-    args.insert(2, "-L".to_string());
-    args.insert(3, tempdir.path().display().to_string());
-    // we also need to override `_stack_start` to make the stack start below fake RAM
+    // we need to override `_stack_start` to make the stack start below fake RAM
     args.push(format!("--defsym=_stack_start={}", new_origin));
 
     let mut c2 = Command::new(LINKER);
+    // set working directory to temporary directory containing our new linker script
+    // this makes sure that it takes precedence over the original one
+    c2.current_dir(tempdir.path());
     c2.args(&args);
     log::trace!("{:?}", c2);
     let status = c2.status()?;
