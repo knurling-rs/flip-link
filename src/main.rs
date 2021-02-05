@@ -151,19 +151,18 @@ fn notmain() -> Result<i32, anyhow::Error> {
     drop(new_linker_script);
 
     // invoke the linker a second time
-    let mut args = args;
+    let mut c2 = Command::new(LINKER);
     // add the current dir to the linker search path to include all unmodified scripts there
     // HACK `-L` needs to go after `-flavor gnu`; position is currently hardcoded
-    args.insert(2, "-L".to_string());
-    args.insert(3, current_dir.to_str().unwrap_or(".").to_string());
+    c2.args(&args[..2]);
+    c2.arg("-L".to_string());
+    c2.arg(current_dir);
+    c2.args(&args[2..]);
     // we need to override `_stack_start` to make the stack start below fake RAM
-    args.push(format!("--defsym=_stack_start={}", new_origin));
-
-    let mut c2 = Command::new(LINKER);
+    c2.arg(format!("--defsym=_stack_start={}", new_origin));
     // set working directory to temporary directory containing our new linker script
     // this makes sure that it takes precedence over the original one
     c2.current_dir(tempdir.path());
-    c2.args(&args);
     log::trace!("{:?}", c2);
     let status = c2.status()?;
     if !status.success() {
