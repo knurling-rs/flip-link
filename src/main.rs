@@ -152,6 +152,10 @@ fn notmain() -> Result<i32, anyhow::Error> {
 
     // invoke the linker a second time
     let mut args = args;
+    // add the current dir to the linker search path to include all unmodified scripts there
+    // HACK `-L` needs to go after `-flavor gnu`; position is currently hardcoded
+    args.insert(2, "-L".to_string());
+    args.insert(3, current_dir.to_str().unwrap_or(".").to_string());
     // we need to override `_stack_start` to make the stack start below fake RAM
     args.push(format!("--defsym=_stack_start={}", new_origin));
 
