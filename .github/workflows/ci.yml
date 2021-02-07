@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
   schedule:
@@ -10,7 +10,7 @@ on:
     - cron: '1 0 * * *'
 env:
   CARGO_TERM_COLOR: always
-  APP_NAME : test-flip-link-app
+  APP_NAME: test-flip-link-app
   CORE_TARGET: thumbv7m-none-eabi # needed by `core`
 
 jobs:
@@ -27,22 +27,22 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: ${{ matrix.rust }}
-        override: true
-    - name: Build
-      run: RUSTFLAGS='--deny warnings' cargo build
-      shell: bash
-    - name: Check fmt
-      # we only need to check fmt on one OS and
-      # fmt should only be checked on stable
-      if: matrix.os == 'ubuntu-latest' && matrix.rust == 'stable'
-      run: |
-        rustup component add rustfmt
-        cargo fmt --all -- --check
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+      - name: Build
+        run: RUSTFLAGS='--deny warnings' cargo build
+        shell: bash
+      - name: Check fmt
+        # we only need to check fmt on one OS and
+        # fmt should only be checked on stable
+        if: matrix.os == 'ubuntu-latest' && matrix.rust == 'stable'
+        run: |
+          rustup component add rustfmt
+          cargo fmt --all -- --check
 
   build_app:
     strategy:
