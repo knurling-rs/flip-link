@@ -3,6 +3,7 @@ use std::{
     env,
     fs::{self, File},
     io::Write,
+    ops::RangeInclusive,
     path::{Path, PathBuf},
     process::{self, Command},
 };
@@ -70,10 +71,10 @@ fn notmain() -> anyhow::Result<i32> {
     // to do this we'll use a fake ORIGIN and LENGTH for the RAM region
     // this fake RAM region will be at the end of real RAM region
     let new_origin = round_down_to_nearest_multiple(
-        ram_entry.end() as u64 - used_ram_length,
+        ram_entry.end() - used_ram_length,
         used_ram_align.max(SP_ALIGN),
     );
-    let new_length = ram_entry.end() as u64 - new_origin;
+    let new_length = ram_entry.end() - new_origin;
 
     log::info!(
         "new RAM region: ORIGIN={:#x}, LENGTH={}",
@@ -128,7 +129,7 @@ fn compute_span_of_ram_sections(ram_entry: MemoryEntry, object: object::File) ->
     let mut used_ram_start = u64::MAX;
     let mut used_ram_end = 0;
     let mut used_ram_align = 0;
-    let ram_region_span = ram_entry.origin as u64..=ram_entry.end() as u64;
+    let ram_region_span = ram_entry.span();
     let mut found_a_section = false;
     for section in object.sections() {
         if let SectionFlags::Elf { sh_flags } = section.flags() {
@@ -158,7 +159,7 @@ fn compute_span_of_ram_sections(ram_entry: MemoryEntry, object: object::File) ->
     }
 
     let used_ram_length = if !found_a_section {
-        used_ram_start = ram_entry.origin as u64;
+        used_ram_start = ram_entry.origin;
         0
     } else {
         used_ram_end - used_ram_start
@@ -263,17 +264,21 @@ fn get_output_path(args: &[String]) -> Option<&str> {
     None
 }
 
-// Entry under the `MEMORY` section in a linker script
+/// Entry under the `MEMORY` section in a linker script
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct MemoryEntry {
     line: usize,
-    origin: u32,
-    length: u32,
+    origin: u64,
+    length: u64,
 }
 
 impl MemoryEntry {
-    fn end(&self) -> u32 {
+    fn end(&self) -> u64 {
         self.origin + self.length
+    }
+
+    fn span(&self) -> RangeInclusive<u64> {
+        self.origin..=self.end()
     }
 }
 
@@ -327,7 +332,7 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
         let boundary_pos = tryc!(line.find(|c| c == ',' || c == ' '));
         const HEX: &str = "0x";
         let origin = if line.starts_with(HEX) {
-            tryc!(u32::from_str_radix(&line[HEX.len()..boundary_pos], 16).ok())
+            tryc!(u64::from_str_radix(&line[HEX.len()..boundary_pos], 16).ok())
         } else {
             tryc!(line[..boundary_pos].parse().ok())
         };
@@ -343,7 +348,7 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
             let boundary_pos = segment
                 .find(|c| c == 'K' || c == 'M')
                 .unwrap_or(segment.len());
-            let length: u32 = tryc!(segment[..boundary_pos].parse().ok());
+            let length: u64 = tryc!(segment[..boundary_pos].parse().ok());
             let raw = &segment[boundary_pos..];
             let mut chars = raw.chars();
             let unit = chars.next();
