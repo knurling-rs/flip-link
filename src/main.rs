@@ -64,51 +64,7 @@ fn notmain() -> anyhow::Result<i32> {
     // error in that case (e.g. the stack may have been placed in CCRAM)
 
     // compute the span of RAM sections
-    let mut used_ram_start = u64::MAX;
-    let mut used_ram_end = 0;
-    let mut used_ram_align = 0;
-    let ram_region_span = ram_entry.origin as u64..=ram_entry.end() as u64;
-    let mut found_a_section = false;
-    for section in object.sections() {
-        if let SectionFlags::Elf { sh_flags } = section.flags() {
-            if sh_flags & elf::SHF_ALLOC as u64 != 0 {
-                let start = section.address();
-                let size = section.size();
-                let end = start + size;
-
-                if ram_region_span.contains(&start) && ram_region_span.contains(&end) {
-                    found_a_section = true;
-                    log::debug!(
-                        "{} resides in RAM",
-                        section.name().unwrap_or("nameless section")
-                    );
-                    used_ram_align = used_ram_align.max(section.align());
-
-                    if used_ram_start > start {
-                        used_ram_start = start;
-                    }
-
-                    if used_ram_end < end {
-                        used_ram_end = end;
-                    }
-                }
-            }
-        }
-    }
-
-    let used_ram_length = if !found_a_section {
-        used_ram_start = ram_entry.origin as u64;
-        0
-    } else {
-        used_ram_end - used_ram_start
-    };
-
-    log::info!(
-        "used RAM spans: origin={:#x}, length={}, align={}",
-        used_ram_start,
-        used_ram_length,
-        used_ram_align
-    );
+    let (used_ram_length, used_ram_align) = compute_span_of_ram_sections(ram_entry, object);
 
     // the idea is to push `used_ram` all the way to the end of the RAM region
     // to do this we'll use a fake ORIGIN and LENGTH for the RAM region
@@ -165,6 +121,57 @@ fn notmain() -> anyhow::Result<i32> {
     }
 
     Ok(0)
+}
+
+/// Returns `(used_ram_length, used_ram_align)`
+fn compute_span_of_ram_sections(ram_entry: MemoryEntry, object: object::File) -> (u64, u64) {
+    let mut used_ram_start = u64::MAX;
+    let mut used_ram_end = 0;
+    let mut used_ram_align = 0;
+    let ram_region_span = ram_entry.origin as u64..=ram_entry.end() as u64;
+    let mut found_a_section = false;
+    for section in object.sections() {
+        if let SectionFlags::Elf { sh_flags } = section.flags() {
+            if sh_flags & elf::SHF_ALLOC as u64 != 0 {
+                let start = section.address();
+                let size = section.size();
+                let end = start + size;
+
+                if ram_region_span.contains(&start) && ram_region_span.contains(&end) {
+                    found_a_section = true;
+                    log::debug!(
+                        "{} resides in RAM",
+                        section.name().unwrap_or("nameless section")
+                    );
+                    used_ram_align = used_ram_align.max(section.align());
+
+                    if used_ram_start > start {
+                        used_ram_start = start;
+                    }
+
+                    if used_ram_end < end {
+                        used_ram_end = end;
+                    }
+                }
+            }
+        }
+    }
+
+    let used_ram_length = if !found_a_section {
+        used_ram_start = ram_entry.origin as u64;
+        0
+    } else {
+        used_ram_end - used_ram_start
+    };
+
+    log::info!(
+        "used RAM spans: origin={:#x}, length={}, align={}",
+        used_ram_start,
+        used_ram_length,
+        used_ram_align
+    );
+
+    (used_ram_length, used_ram_align)
 }
 
 fn round_down_to_nearest_multiple(x: u64, multiple: u64) -> u64 {
