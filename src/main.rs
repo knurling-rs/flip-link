@@ -7,7 +7,7 @@ use std::{
     process::{self, Command},
 };
 
-use anyhow::{anyhow, bail};
+use anyhow::anyhow;
 use object::{elf, Object as _, ObjectSection, SectionFlags};
 
 const EXIT_CODE_FAILURE: i32 = 1;
@@ -16,11 +16,11 @@ const LINKER: &str = "rust-lld";
 /// Stack Pointer alignment required by the ARM architecture
 const SP_ALIGN: u64 = 8;
 
-fn main() -> Result<(), anyhow::Error> {
+fn main() -> anyhow::Result<()> {
     notmain().map(|code| process::exit(code))
 }
 
-fn notmain() -> Result<i32, anyhow::Error> {
+fn notmain() -> anyhow::Result<i32> {
     env_logger::init();
 
     // NOTE `skip` the name/path of the binary (first argument)
@@ -53,12 +53,8 @@ fn notmain() -> Result<i32, anyhow::Error> {
             break;
         }
     }
-
-    let (ram_linker_script, ram_entry) = if let Some((path, entry)) = ram_path_entry {
-        (path, entry)
-    } else {
-        bail!("MEMORY.RAM not found after scanning linker scripts");
-    };
+    let (ram_linker_script, ram_entry) = ram_path_entry
+        .ok_or_else(|| anyhow!("MEMORY.RAM not found after scanning linker scripts"))?;
 
     let elf = fs::read(output_path)?;
     let object = object::File::parse(&elf)?;
@@ -153,15 +149,15 @@ fn notmain() -> Result<i32, anyhow::Error> {
     let mut c2 = Command::new(LINKER);
     // add the current dir to the linker search path to include all unmodified scripts there
     // HACK `-L` needs to go after `-flavor gnu`; position is currently hardcoded
-    c2.args(&args[..2]);
-    c2.arg("-L".to_string());
-    c2.arg(current_dir);
-    c2.args(&args[2..]);
-    // we need to override `_stack_start` to make the stack start below fake RAM
-    c2.arg(format!("--defsym=_stack_start={}", new_origin));
-    // set working directory to temporary directory containing our new linker script
-    // this makes sure that it takes precedence over the original one
-    c2.current_dir(tempdir.path());
+    c2.args(&args[..2])
+        .arg("-L".to_string())
+        .arg(current_dir)
+        .args(&args[2..])
+        // we need to override `_stack_start` to make the stack start below fake RAM
+        .arg(format!("--defsym=_stack_start={}", new_origin))
+        // set working directory to temporary directory containing our new linker script
+        // this makes sure that it takes precedence over the original one
+        .current_dir(tempdir.path());
     log::trace!("{:?}", c2);
     let status = c2.status()?;
     if !status.success() {
