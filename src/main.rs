@@ -282,6 +282,7 @@ impl MemoryEntry {
     }
 }
 
+/// Rm `token` from beginning of `line`, else `continue` loop iteration
 macro_rules! eat {
     ($line:expr, $token:expr) => {
         if $line.starts_with($token) {
@@ -303,7 +304,7 @@ fn get_includes_from_linker_script(linker_script: &str) -> Vec<&str> {
     includes
 }
 
-// looks for "RAM : ORIGIN = $origin, LENGTH = $length"
+/// Looks for "RAM : ORIGIN = $origin, LENGTH = $length"
 // FIXME this is a dumb line-by-line parser
 fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
     macro_rules! tryc {
