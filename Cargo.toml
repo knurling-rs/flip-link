@@ -12,7 +12,7 @@ readme = "README.md"
 
 [dependencies]
 anyhow = "1.0.32"
-env_logger = "0.7.1"
+env_logger = "0.8.3"
 log = "0.4.11"
-object = "0.21.1"
+object = "0.23.0"
 tempfile = "3.1.0"
