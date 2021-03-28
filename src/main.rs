@@ -10,16 +10,15 @@ use std::{
 use anyhow::{anyhow, bail};
 use object::{elf, Object as _, ObjectSection, SectionFlags};
 
+const EXIT_CODE_FAILURE: i32 = 1;
 // TODO make this configurable (via command-line flag or similar)
 const LINKER: &str = "rust-lld";
-const EXIT_CODE_FAILURE: i32 = 1;
+/// Stack Pointer alignment required by the ARM architecture
+const SP_ALIGN: u64 = 8;
 
 fn main() -> Result<(), anyhow::Error> {
     notmain().map(|code| process::exit(code))
 }
-
-// Stack Pointer alignment required by the ARM architecture
-const SP_ALIGN: u64 = 8;
 
 fn notmain() -> Result<i32, anyhow::Error> {
     env_logger::init();
