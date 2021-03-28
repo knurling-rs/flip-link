@@ -194,15 +194,13 @@ impl LinkerScript {
     }
 }
 
-fn get_linker_scripts(
-    linker_args: &[String],
-    current_dir: &Path,
-) -> Result<Vec<LinkerScript>, anyhow::Error> {
-    const FLAG: &str = "-L";
-
+fn get_linker_scripts(args: &[String], current_dir: &Path) -> anyhow::Result<Vec<LinkerScript>> {
+    // search paths are the current dir and args passed by `-L`
     let mut search_paths = vec![];
     let mut next_is_search_path = false;
-    for arg in linker_args {
+    for arg in args {
+        const FLAG: &str = "-L";
+
         if arg == FLAG {
             next_is_search_path = true;
         } else if next_is_search_path {
@@ -211,21 +209,20 @@ fn get_linker_scripts(
             search_paths.push(Path::new(arg));
         }
     }
-
     search_paths.push(current_dir);
 
+    // get names of linker scripts, passed via `-T`
+    // FIXME this doesn't handle "-T memory.x" (as two separate CLI arguments)
     let mut search_list = vec![];
-    for arg in linker_args.iter() {
-        // FIXME this doesn't handle "-T memory.x" (as two separate CLI arguments)
+    for arg in args {
         const FLAG: &str = "-T";
-
         if arg.starts_with(FLAG) {
             let filename = &arg[FLAG.len()..];
-
             search_list.push(Cow::Borrowed(filename));
         }
     }
 
+    // try to find all linker scripts from `search_list` in the `search_paths`
     let mut linker_scripts = vec![];
     while let Some(filename) = search_list.pop() {
         for dir in &search_paths {
@@ -234,6 +231,8 @@ fn get_linker_scripts(
             if full_path.exists() {
                 log::trace!("found {} in {}", filename, dir.display());
                 let contents = fs::read_to_string(&full_path)?;
+
+                // also search for linker scripts specified inside known scripts
                 for include in get_includes_from_linker_script(&contents) {
                     log::trace!("{} INCLUDEs {}", filename, include);
                     search_list.push(Cow::Owned(include.to_string()));
