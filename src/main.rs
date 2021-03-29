@@ -1,5 +1,4 @@
 use std::{
-    borrow::Cow,
     env,
     fs::{self, File},
     io::Write,
@@ -10,6 +9,7 @@ use std::{
 
 use anyhow::anyhow;
 use object::{elf, Object as _, ObjectSection, SectionFlags};
+use structopt::StructOpt;
 
 const EXIT_CODE_FAILURE: i32 = 1;
 // TODO make this configurable (via command-line flag or similar)
@@ -17,12 +17,28 @@ const LINKER: &str = "rust-lld";
 /// Stack Pointer alignment required by the ARM architecture
 const SP_ALIGN: u64 = 8;
 
+#[derive(Debug, StructOpt)]
+struct Opt {
+    /// Add `<library-path>` to library search path
+    #[structopt(short = "-L", long, parse(from_os_str))]
+    library_path: Vec<PathBuf>,
+
+    /// Set output file name
+    #[structopt(short, long, parse(from_os_str))]
+    output: PathBuf,
+
+    /// Read linker script
+    #[structopt(short = "T", long)]
+    script: Vec<String>,
+}
+
 fn main() -> anyhow::Result<()> {
     notmain().map(|code| process::exit(code))
 }
 
 fn notmain() -> anyhow::Result<i32> {
     env_logger::init();
+    let opt: Opt = Opt::from_args();
 
     // NOTE `skip` the name/path of the binary (first argument)
     let args = env::args().skip(1).collect::<Vec<_>>();
@@ -35,12 +51,13 @@ fn notmain() -> anyhow::Result<i32> {
     if !status.success() {
         return Ok(status.code().unwrap_or(EXIT_CODE_FAILURE));
     }
-
     // if linking succeeds then linker scripts are well-formed; we'll rely on that in the parser
+
     let current_dir = env::current_dir()?;
-    let linker_scripts = get_linker_scripts(&args, &current_dir)?;
-    let output_path =
-        get_output_path(&args).ok_or_else(|| anyhow!("(BUG?) `-o` flag not found"))?;
+
+    let mut search_paths = opt.library_path;
+    search_paths.push(current_dir.clone());
+    let linker_scripts = get_linker_scripts(opt.script, search_paths)?;
 
     // here we assume that we'll end with the same linker script as LLD
     // I'm unsure about how LLD picks a linker script when there are multiple candidates in the
@@ -57,7 +74,7 @@ fn notmain() -> anyhow::Result<i32> {
     let (ram_linker_script, ram_entry) = ram_path_entry
         .ok_or_else(|| anyhow!("MEMORY.RAM not found after scanning linker scripts"))?;
 
-    let elf = fs::read(output_path)?;
+    let elf = fs::read(opt.output)?;
     let object = object::File::parse(&elf)?;
 
     // TODO assert that `_stack_start == ORIGIN(RAM) + LENGTH(RAM)`
@@ -194,38 +211,14 @@ impl LinkerScript {
     }
 }
 
-fn get_linker_scripts(args: &[String], current_dir: &Path) -> anyhow::Result<Vec<LinkerScript>> {
-    // search paths are the current dir and args passed by `-L`
-    let mut search_paths = args
-        .windows(2)
-        .filter_map(|x| {
-            if x[0] == "-L" {
-                log::trace!("new search path: {}", x[1]);
-                return Some(Path::new(&x[1]));
-            }
-            None
-        })
-        .collect::<Vec<_>>();
-    search_paths.push(current_dir);
-
-    // get names of linker scripts, passed via `-T`
-    // FIXME this doesn't handle "-T memory.x" (as two separate CLI arguments)
-    let mut search_list = args
-        .iter()
-        .filter_map(|arg| {
-            const FLAG: &str = "-T";
-            if arg.starts_with(FLAG) {
-                let filename = &arg[FLAG.len()..];
-                return Some(Cow::Borrowed(filename));
-            }
-            None
-        })
-        .collect::<Vec<_>>();
-
-    // try to find all linker scripts from `search_list` in the `search_paths`
+/// Try to find all [`LinkerScript`]s from `search_list` in the `search_paths`
+fn get_linker_scripts(
+    mut search_list: Vec<String>,
+    search_paths: Vec<PathBuf>,
+) -> anyhow::Result<Vec<LinkerScript>> {
     let mut linker_scripts = vec![];
     while let Some(filename) = search_list.pop() {
-        for dir in &search_paths {
+        for dir in search_paths.iter() {
             let full_path = dir.join(&*filename);
 
             if full_path.exists() {
@@ -235,32 +228,18 @@ fn get_linker_scripts(args: &[String], current_dir: &Path) -> anyhow::Result<Vec
                 // also load linker scripts `INCLUDE`d by other scripts
                 for include in get_includes_from_linker_script(&contents) {
                     log::trace!("{} INCLUDEs {}", filename, include);
-                    search_list.push(Cow::Owned(include.to_string()));
+                    search_list.push(include.to_string());
                 }
 
                 linker_scripts.push(LinkerScript {
-                    filename: filename.into_owned(),
+                    filename,
                     full_path,
                 });
                 break;
             }
         }
     }
-
     Ok(linker_scripts)
-}
-
-fn get_output_path(args: &[String]) -> Option<&str> {
-    let mut next_is_output = false;
-    for arg in args {
-        if arg == "-o" {
-            next_is_output = true;
-        } else if next_is_output {
-            return Some(arg);
-        }
-    }
-
-    None
 }
 
 /// Entry under the `MEMORY` section in a linker script
