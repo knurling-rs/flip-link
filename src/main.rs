@@ -19,7 +19,11 @@ const LINKER: &str = "rust-lld";
 const SP_ALIGN: u64 = 8;
 
 #[derive(Debug, StructOpt)]
-struct Opt {}
+struct Opt {
+    /// Set output file name
+    #[structopt(short, long, parse(from_os_str))]
+    output: PathBuf,
+}
 
 fn main() -> anyhow::Result<()> {
     notmain().map(|code| process::exit(code))
@@ -44,8 +48,6 @@ fn notmain() -> anyhow::Result<i32> {
     // if linking succeeds then linker scripts are well-formed; we'll rely on that in the parser
     let current_dir = env::current_dir()?;
     let linker_scripts = get_linker_scripts(&args, &current_dir)?;
-    let output_path =
-        get_output_path(&args).ok_or_else(|| anyhow!("(BUG?) `-o` flag not found"))?;
 
     // here we assume that we'll end with the same linker script as LLD
     // I'm unsure about how LLD picks a linker script when there are multiple candidates in the
@@ -62,7 +64,7 @@ fn notmain() -> anyhow::Result<i32> {
     let (ram_linker_script, ram_entry) = ram_path_entry
         .ok_or_else(|| anyhow!("MEMORY.RAM not found after scanning linker scripts"))?;
 
-    let elf = fs::read(output_path)?;
+    let elf = fs::read(opt.output)?;
     let object = object::File::parse(&elf)?;
 
     // TODO assert that `_stack_start == ORIGIN(RAM) + LENGTH(RAM)`
@@ -253,19 +255,6 @@ fn get_linker_scripts(args: &[String], current_dir: &Path) -> anyhow::Result<Vec
     }
 
     Ok(linker_scripts)
-}
-
-fn get_output_path(args: &[String]) -> Option<&str> {
-    let mut next_is_output = false;
-    for arg in args {
-        if arg == "-o" {
-            next_is_output = true;
-        } else if next_is_output {
-            return Some(arg);
-        }
-    }
-
-    None
 }
 
 /// Entry under the `MEMORY` section in a linker script
