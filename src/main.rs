@@ -1,5 +1,4 @@
 use std::{
-    borrow::Cow,
     env,
     fs::{self, File},
     io::Write,
@@ -20,9 +19,17 @@ const SP_ALIGN: u64 = 8;
 
 #[derive(Debug, StructOpt)]
 struct Opt {
+    /// Add `<library-path>` to library search path
+    #[structopt(short = "-L", long, parse(from_os_str))]
+    library_path: Vec<PathBuf>,
+
     /// Set output file name
     #[structopt(short, long, parse(from_os_str))]
     output: PathBuf,
+
+    /// Read linker script
+    #[structopt(short = "T", long)]
+    script: Vec<String>,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -44,10 +51,13 @@ fn notmain() -> anyhow::Result<i32> {
     if !status.success() {
         return Ok(status.code().unwrap_or(EXIT_CODE_FAILURE));
     }
-
     // if linking succeeds then linker scripts are well-formed; we'll rely on that in the parser
+
     let current_dir = env::current_dir()?;
-    let linker_scripts = get_linker_scripts(&args, &current_dir)?;
+
+    let mut search_paths = opt.library_path;
+    search_paths.push(current_dir.clone());
+    let linker_scripts = get_linker_scripts(opt.script, search_paths)?;
 
     // here we assume that we'll end with the same linker script as LLD
     // I'm unsure about how LLD picks a linker script when there are multiple candidates in the
@@ -201,38 +211,14 @@ impl LinkerScript {
     }
 }
 
-fn get_linker_scripts(args: &[String], current_dir: &Path) -> anyhow::Result<Vec<LinkerScript>> {
-    // search paths are the current dir and args passed by `-L`
-    let mut search_paths = args
-        .windows(2)
-        .filter_map(|x| {
-            if x[0] == "-L" {
-                log::trace!("new search path: {}", x[1]);
-                return Some(Path::new(&x[1]));
-            }
-            None
-        })
-        .collect::<Vec<_>>();
-    search_paths.push(current_dir);
-
-    // get names of linker scripts, passed via `-T`
-    // FIXME this doesn't handle "-T memory.x" (as two separate CLI arguments)
-    let mut search_list = args
-        .iter()
-        .filter_map(|arg| {
-            const FLAG: &str = "-T";
-            if arg.starts_with(FLAG) {
-                let filename = &arg[FLAG.len()..];
-                return Some(Cow::Borrowed(filename));
-            }
-            None
-        })
-        .collect::<Vec<_>>();
-
-    // try to find all linker scripts from `search_list` in the `search_paths`
+/// Try to find all [`LinkerScript`]s from `search_list` in the `search_paths`
+fn get_linker_scripts(
+    mut search_list: Vec<String>,
+    search_paths: Vec<PathBuf>,
+) -> anyhow::Result<Vec<LinkerScript>> {
     let mut linker_scripts = vec![];
     while let Some(filename) = search_list.pop() {
-        for dir in &search_paths {
+        for dir in search_paths.iter() {
             let full_path = dir.join(&*filename);
 
             if full_path.exists() {
@@ -242,18 +228,17 @@ fn get_linker_scripts(args: &[String], current_dir: &Path) -> anyhow::Result<Vec
                 // also load linker scripts `INCLUDE`d by other scripts
                 for include in get_includes_from_linker_script(&contents) {
                     log::trace!("{} INCLUDEs {}", filename, include);
-                    search_list.push(Cow::Owned(include.to_string()));
+                    search_list.push(include.to_string());
                 }
 
                 linker_scripts.push(LinkerScript {
-                    filename: filename.into_owned(),
+                    filename,
                     full_path,
                 });
                 break;
             }
         }
     }
-
     Ok(linker_scripts)
 }
 
