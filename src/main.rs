@@ -10,6 +10,7 @@ use std::{
 
 use anyhow::anyhow;
 use object::{elf, Object as _, ObjectSection, SectionFlags};
+use structopt::StructOpt;
 
 const EXIT_CODE_FAILURE: i32 = 1;
 // TODO make this configurable (via command-line flag or similar)
@@ -17,12 +18,16 @@ const LINKER: &str = "rust-lld";
 /// Stack Pointer alignment required by the ARM architecture
 const SP_ALIGN: u64 = 8;
 
+#[derive(Debug, StructOpt)]
+struct Opt {}
+
 fn main() -> anyhow::Result<()> {
     notmain().map(|code| process::exit(code))
 }
 
 fn notmain() -> anyhow::Result<i32> {
     env_logger::init();
+    let opt: Opt = Opt::from_args();
 
     // NOTE `skip` the name/path of the binary (first argument)
     let args = env::args().skip(1).collect::<Vec<_>>();
