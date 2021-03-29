@@ -3,25 +3,25 @@ use std::{
     env,
     fs::{self, File},
     io::Write,
+    ops::RangeInclusive,
     path::{Path, PathBuf},
     process::{self, Command},
 };
 
-use anyhow::{anyhow, bail};
+use anyhow::anyhow;
 use object::{elf, Object as _, ObjectSection, SectionFlags};
 
+const EXIT_CODE_FAILURE: i32 = 1;
 // TODO make this configurable (via command-line flag or similar)
 const LINKER: &str = "rust-lld";
-const EXIT_CODE_FAILURE: i32 = 1;
+/// Stack Pointer alignment required by the ARM architecture
+const SP_ALIGN: u64 = 8;
 
-fn main() -> Result<(), anyhow::Error> {
+fn main() -> anyhow::Result<()> {
     notmain().map(|code| process::exit(code))
 }
 
-// Stack Pointer alignment required by the ARM architecture
-const SP_ALIGN: u64 = 8;
-
-fn notmain() -> Result<i32, anyhow::Error> {
+fn notmain() -> anyhow::Result<i32> {
     env_logger::init();
 
     // NOTE `skip` the name/path of the binary (first argument)
@@ -54,12 +54,8 @@ fn notmain() -> Result<i32, anyhow::Error> {
             break;
         }
     }
-
-    let (ram_linker_script, ram_entry) = if let Some((path, entry)) = ram_path_entry {
-        (path, entry)
-    } else {
-        bail!("MEMORY.RAM not found after scanning linker scripts");
-    };
+    let (ram_linker_script, ram_entry) = ram_path_entry
+        .ok_or_else(|| anyhow!("MEMORY.RAM not found after scanning linker scripts"))?;
 
     let elf = fs::read(output_path)?;
     let object = object::File::parse(&elf)?;
@@ -69,60 +65,16 @@ fn notmain() -> Result<i32, anyhow::Error> {
     // error in that case (e.g. the stack may have been placed in CCRAM)
 
     // compute the span of RAM sections
-    let mut used_ram_start = u64::MAX;
-    let mut used_ram_end = 0;
-    let mut used_ram_align = 0;
-    let ram_region_span = ram_entry.origin as u64..=ram_entry.end() as u64;
-    let mut found_a_section = false;
-    for section in object.sections() {
-        if let SectionFlags::Elf { sh_flags } = section.flags() {
-            if sh_flags & elf::SHF_ALLOC as u64 != 0 {
-                let start = section.address();
-                let size = section.size();
-                let end = start + size;
-
-                if ram_region_span.contains(&start) && ram_region_span.contains(&end) {
-                    found_a_section = true;
-                    log::debug!(
-                        "{} resides in RAM",
-                        section.name().unwrap_or("nameless section")
-                    );
-                    used_ram_align = used_ram_align.max(section.align());
-
-                    if used_ram_start > start {
-                        used_ram_start = start;
-                    }
-
-                    if used_ram_end < end {
-                        used_ram_end = end;
-                    }
-                }
-            }
-        }
-    }
-
-    let used_ram_length = if !found_a_section {
-        used_ram_start = ram_entry.origin as u64;
-        0
-    } else {
-        used_ram_end - used_ram_start
-    };
-
-    log::info!(
-        "used RAM spans: origin={:#x}, length={}, align={}",
-        used_ram_start,
-        used_ram_length,
-        used_ram_align
-    );
+    let (used_ram_length, used_ram_align) = compute_span_of_ram_sections(ram_entry, object);
 
     // the idea is to push `used_ram` all the way to the end of the RAM region
     // to do this we'll use a fake ORIGIN and LENGTH for the RAM region
     // this fake RAM region will be at the end of real RAM region
     let new_origin = round_down_to_nearest_multiple(
-        ram_entry.end() as u64 - used_ram_length,
+        ram_entry.end() - used_ram_length,
         used_ram_align.max(SP_ALIGN),
     );
-    let new_length = ram_entry.end() as u64 - new_origin;
+    let new_length = ram_entry.end() - new_origin;
 
     log::info!(
         "new RAM region: ORIGIN={:#x}, LENGTH={}",
@@ -154,15 +106,15 @@ fn notmain() -> Result<i32, anyhow::Error> {
     let mut c2 = Command::new(LINKER);
     // add the current dir to the linker search path to include all unmodified scripts there
     // HACK `-L` needs to go after `-flavor gnu`; position is currently hardcoded
-    c2.args(&args[..2]);
-    c2.arg("-L".to_string());
-    c2.arg(current_dir);
-    c2.args(&args[2..]);
-    // we need to override `_stack_start` to make the stack start below fake RAM
-    c2.arg(format!("--defsym=_stack_start={}", new_origin));
-    // set working directory to temporary directory containing our new linker script
-    // this makes sure that it takes precedence over the original one
-    c2.current_dir(tempdir.path());
+    c2.args(&args[..2])
+        .arg("-L".to_string())
+        .arg(current_dir)
+        .args(&args[2..])
+        // we need to override `_stack_start` to make the stack start below fake RAM
+        .arg(format!("--defsym=_stack_start={}", new_origin))
+        // set working directory to temporary directory containing our new linker script
+        // this makes sure that it takes precedence over the original one
+        .current_dir(tempdir.path());
     log::trace!("{:?}", c2);
     let status = c2.status()?;
     if !status.success() {
@@ -170,6 +122,57 @@ fn notmain() -> Result<i32, anyhow::Error> {
     }
 
     Ok(0)
+}
+
+/// Returns `(used_ram_length, used_ram_align)`
+fn compute_span_of_ram_sections(ram_entry: MemoryEntry, object: object::File) -> (u64, u64) {
+    let mut used_ram_start = u64::MAX;
+    let mut used_ram_end = 0;
+    let mut used_ram_align = 0;
+    let ram_region_span = ram_entry.span();
+    let mut found_a_section = false;
+    for section in object.sections() {
+        if let SectionFlags::Elf { sh_flags } = section.flags() {
+            if sh_flags & elf::SHF_ALLOC as u64 != 0 {
+                let start = section.address();
+                let size = section.size();
+                let end = start + size;
+
+                if ram_region_span.contains(&start) && ram_region_span.contains(&end) {
+                    found_a_section = true;
+                    log::debug!(
+                        "{} resides in RAM",
+                        section.name().unwrap_or("nameless section")
+                    );
+                    used_ram_align = used_ram_align.max(section.align());
+
+                    if used_ram_start > start {
+                        used_ram_start = start;
+                    }
+
+                    if used_ram_end < end {
+                        used_ram_end = end;
+                    }
+                }
+            }
+        }
+    }
+
+    let used_ram_length = if !found_a_section {
+        used_ram_start = ram_entry.origin;
+        0
+    } else {
+        used_ram_end - used_ram_start
+    };
+
+    log::info!(
+        "used RAM spans: origin={:#x}, length={}, align={}",
+        used_ram_start,
+        used_ram_length,
+        used_ram_align
+    );
+
+    (used_ram_length, used_ram_align)
 }
 
 fn round_down_to_nearest_multiple(x: u64, multiple: u64) -> u64 {
@@ -191,38 +194,35 @@ impl LinkerScript {
     }
 }
 
-fn get_linker_scripts(
-    linker_args: &[String],
-    current_dir: &Path,
-) -> Result<Vec<LinkerScript>, anyhow::Error> {
-    const FLAG: &str = "-L";
-
-    let mut search_paths = vec![];
-    let mut next_is_search_path = false;
-    for arg in linker_args {
-        if arg == FLAG {
-            next_is_search_path = true;
-        } else if next_is_search_path {
-            next_is_search_path = false;
-            log::trace!("new search path: {}", arg);
-            search_paths.push(Path::new(arg));
-        }
-    }
-
+fn get_linker_scripts(args: &[String], current_dir: &Path) -> anyhow::Result<Vec<LinkerScript>> {
+    // search paths are the current dir and args passed by `-L`
+    let mut search_paths = args
+        .windows(2)
+        .filter_map(|x| {
+            if x[0] == "-L" {
+                log::trace!("new search path: {}", x[1]);
+                return Some(Path::new(&x[1]));
+            }
+            None
+        })
+        .collect::<Vec<_>>();
     search_paths.push(current_dir);
 
-    let mut search_list = vec![];
-    for arg in linker_args.iter() {
-        // FIXME this doesn't handle "-T memory.x" (as two separate CLI arguments)
-        const FLAG: &str = "-T";
+    // get names of linker scripts, passed via `-T`
+    // FIXME this doesn't handle "-T memory.x" (as two separate CLI arguments)
+    let mut search_list = args
+        .iter()
+        .filter_map(|arg| {
+            const FLAG: &str = "-T";
+            if arg.starts_with(FLAG) {
+                let filename = &arg[FLAG.len()..];
+                return Some(Cow::Borrowed(filename));
+            }
+            None
+        })
+        .collect::<Vec<_>>();
 
-        if arg.starts_with(FLAG) {
-            let filename = &arg[FLAG.len()..];
-
-            search_list.push(Cow::Borrowed(filename));
-        }
-    }
-
+    // try to find all linker scripts from `search_list` in the `search_paths`
     let mut linker_scripts = vec![];
     while let Some(filename) = search_list.pop() {
         for dir in &search_paths {
@@ -231,6 +231,8 @@ fn get_linker_scripts(
             if full_path.exists() {
                 log::trace!("found {} in {}", filename, dir.display());
                 let contents = fs::read_to_string(&full_path)?;
+
+                // also load linker scripts `INCLUDE`d by other scripts
                 for include in get_includes_from_linker_script(&contents) {
                     log::trace!("{} INCLUDEs {}", filename, include);
                     search_list.push(Cow::Owned(include.to_string()));
@@ -261,20 +263,25 @@ fn get_output_path(args: &[String]) -> Option<&str> {
     None
 }
 
-// Entry under the `MEMORY` section in a linker script
+/// Entry under the `MEMORY` section in a linker script
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct MemoryEntry {
     line: usize,
-    origin: u32,
-    length: u32,
+    origin: u64,
+    length: u64,
 }
 
 impl MemoryEntry {
-    fn end(&self) -> u32 {
+    fn end(&self) -> u64 {
         self.origin + self.length
+    }
+
+    fn span(&self) -> RangeInclusive<u64> {
+        self.origin..=self.end()
     }
 }
 
+/// Rm `token` from beginning of `line`, else `continue` loop iteration
 macro_rules! eat {
     ($line:expr, $token:expr) => {
         if $line.starts_with($token) {
@@ -296,7 +303,7 @@ fn get_includes_from_linker_script(linker_script: &str) -> Vec<&str> {
     includes
 }
 
-// looks for "RAM : ORIGIN = $origin, LENGTH = $length"
+/// Looks for "RAM : ORIGIN = $origin, LENGTH = $length"
 // FIXME this is a dumb line-by-line parser
 fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
     macro_rules! tryc {
@@ -325,7 +332,7 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
         let boundary_pos = tryc!(line.find(|c| c == ',' || c == ' '));
         const HEX: &str = "0x";
         let origin = if line.starts_with(HEX) {
-            tryc!(u32::from_str_radix(&line[HEX.len()..boundary_pos], 16).ok())
+            tryc!(u64::from_str_radix(&line[HEX.len()..boundary_pos], 16).ok())
         } else {
             tryc!(line[..boundary_pos].parse().ok())
         };
@@ -341,7 +348,7 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
             let boundary_pos = segment
                 .find(|c| c == 'K' || c == 'M')
                 .unwrap_or(segment.len());
-            let length: u32 = tryc!(segment[..boundary_pos].parse().ok());
+            let length: u64 = tryc!(segment[..boundary_pos].parse().ok());
             let raw = &segment[boundary_pos..];
             let mut chars = raw.chars();
             let unit = chars.next();
