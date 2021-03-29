@@ -232,7 +232,7 @@ fn get_linker_scripts(args: &[String], current_dir: &Path) -> anyhow::Result<Vec
                 log::trace!("found {} in {}", filename, dir.display());
                 let contents = fs::read_to_string(&full_path)?;
 
-                // also search for linker scripts specified inside known scripts
+                // also load linker scripts `INCLUDE`d by other scripts
                 for include in get_includes_from_linker_script(&contents) {
                     log::trace!("{} INCLUDEs {}", filename, include);
                     search_list.push(Cow::Owned(include.to_string()));
