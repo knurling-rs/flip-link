@@ -103,11 +103,7 @@ fn link_normally(args: &[String]) -> Result<(), i32> {
     c.args(args);
     log::trace!("{:?}", c);
 
-    let status = c.status().unwrap();
-    if !status.success() {
-        return Err(status.code().unwrap_or(EXIT_CODE_FAILURE));
-    }
-    Ok(())
+    success_or_exitstatus(c)
 }
 
 fn link_again(
@@ -130,6 +126,10 @@ fn link_again(
         .current_dir(tempdir.path());
     log::trace!("{:?}", c);
 
+    success_or_exitstatus(c)
+}
+
+fn success_or_exitstatus(mut c: Command) -> Result<(), i32> {
     let status = c.status().unwrap();
     if !status.success() {
         return Err(status.code().unwrap_or(EXIT_CODE_FAILURE));
