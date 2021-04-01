@@ -4,6 +4,7 @@ mod linking;
 use std::{
     borrow::Cow,
     env,
+    ffi::OsStr,
     fs::{self, File},
     io::Write,
     ops::RangeInclusive,
@@ -74,7 +75,7 @@ fn main() -> anyhow::Result<()> {
     let tempdir = tempfile::tempdir()?;
     let original_linker_script = fs::read_to_string(ram_linker_script.path())?;
     // XXX in theory could collide with a user-specified linker script
-    let mut new_linker_script = File::create(tempdir.path().join(ram_linker_script.filename()))?;
+    let mut new_linker_script = File::create(tempdir.path().join(ram_linker_script.file_name()))?;
 
     for (index, line) in original_linker_script.lines().enumerate() {
         if index == ram_entry.line {
@@ -151,18 +152,20 @@ fn round_down_to_nearest_multiple(x: u64, multiple: u64) -> u64 {
     x - (x % multiple)
 }
 
-struct LinkerScript {
-    filename: String,
-    full_path: PathBuf,
-}
+struct LinkerScript(PathBuf);
 
 impl LinkerScript {
-    fn filename(&self) -> &str {
-        &self.filename
+    fn new(path: PathBuf) -> Self {
+        assert!(path.is_file());
+        Self(path)
+    }
+
+    fn file_name(&self) -> &OsStr {
+        self.path().file_name().unwrap()
     }
 
     fn path(&self) -> &Path {
-        &self.full_path
+        &self.0
     }
 }
 
@@ -188,10 +191,7 @@ fn get_linker_scripts(args: &[String], current_dir: &Path) -> anyhow::Result<Vec
                     search_targets.push(Cow::Owned(include.to_string()));
                 }
 
-                linker_scripts.push(LinkerScript {
-                    filename: filename.into_owned(),
-                    full_path,
-                });
+                linker_scripts.push(LinkerScript::new(full_path));
                 break;
             }
         }
