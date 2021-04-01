@@ -1,3 +1,4 @@
+mod argument_parser;
 mod linking;
 
 use std::{
@@ -27,8 +28,8 @@ fn main() -> anyhow::Result<()> {
 
     let current_dir = env::current_dir()?;
     let linker_scripts = get_linker_scripts(&args, &current_dir)?;
-    let output_path =
-        get_output_path(&args).ok_or_else(|| anyhow!("(BUG?) `-o` flag not found"))?;
+    let output_path = argument_parser::get_output_path(&args)
+        .ok_or_else(|| anyhow!("(BUG?) `-o` flag not found"))?;
 
     // here we assume that we'll end with the same linker script as LLD
     // I'm unsure about how LLD picks a linker script when there are multiple candidates in the
@@ -220,19 +221,6 @@ fn get_linker_scripts(args: &[String], current_dir: &Path) -> anyhow::Result<Vec
     }
 
     Ok(linker_scripts)
-}
-
-fn get_output_path(args: &[String]) -> Option<&str> {
-    let mut next_is_output = false;
-    for arg in args {
-        if arg == "-o" {
-            next_is_output = true;
-        } else if next_is_output {
-            return Some(arg);
-        }
-    }
-
-    None
 }
 
 /// Entry under the `MEMORY` section in a linker script
