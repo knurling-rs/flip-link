@@ -18,10 +18,6 @@ const LINKER: &str = "rust-lld";
 const SP_ALIGN: u64 = 8;
 
 fn main() -> anyhow::Result<()> {
-    notmain().map(|code| process::exit(code))
-}
-
-fn notmain() -> anyhow::Result<i32> {
     env_logger::init();
 
     // NOTE `skip` the name/path of the binary (first argument)
@@ -33,7 +29,7 @@ fn notmain() -> anyhow::Result<i32> {
     log::trace!("{:?}", c1);
     let status = c1.status()?;
     if !status.success() {
-        return Ok(status.code().unwrap_or(EXIT_CODE_FAILURE));
+        process::exit(status.code().unwrap_or(EXIT_CODE_FAILURE));
     }
 
     // if linking succeeds then linker scripts are well-formed; we'll rely on that in the parser
@@ -118,10 +114,10 @@ fn notmain() -> anyhow::Result<i32> {
     log::trace!("{:?}", c2);
     let status = c2.status()?;
     if !status.success() {
-        return Ok(status.code().unwrap_or(EXIT_CODE_FAILURE));
+        process::exit(status.code().unwrap_or(EXIT_CODE_FAILURE));
     }
 
-    Ok(0)
+    Ok(())
 }
 
 /// Returns `(used_ram_length, used_ram_align)`
