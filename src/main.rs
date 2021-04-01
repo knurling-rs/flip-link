@@ -23,16 +23,9 @@ fn main() -> anyhow::Result<()> {
     // NOTE `skip` the name/path of the binary (first argument)
     let args = env::args().skip(1).collect::<Vec<_>>();
 
-    // link normally
-    let mut c1 = Command::new(LINKER);
-    c1.args(&args);
-    log::trace!("{:?}", c1);
-    let status = c1.status()?;
-    if !status.success() {
-        process::exit(status.code().unwrap_or(EXIT_CODE_FAILURE));
-    }
-
     // if linking succeeds then linker scripts are well-formed; we'll rely on that in the parser
+    link_normally(&args).unwrap_or_else(|code| process::exit(code));
+
     let current_dir = env::current_dir()?;
     let linker_scripts = get_linker_scripts(&args, &current_dir)?;
     let output_path =
@@ -117,6 +110,18 @@ fn main() -> anyhow::Result<()> {
         process::exit(status.code().unwrap_or(EXIT_CODE_FAILURE));
     }
 
+    Ok(())
+}
+
+fn link_normally(args: &[String]) -> Result<(), i32> {
+    let mut c = Command::new(LINKER);
+    c.args(args);
+    log::trace!("{:?}", c);
+
+    let status = c.status().unwrap();
+    if !status.success() {
+        return Err(status.code().unwrap_or(EXIT_CODE_FAILURE));
+    }
     Ok(())
 }
 
