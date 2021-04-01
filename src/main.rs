@@ -28,7 +28,6 @@ fn main() -> anyhow::Result<()> {
 
     let current_dir = env::current_dir()?;
     let linker_scripts = get_linker_scripts(&args, &current_dir)?;
-    let output_path = argument_parser::get_output_path(&args)?;
 
     // here we assume that we'll end with the same linker script as LLD
     // I'm unsure about how LLD picks a linker script when there are multiple candidates in the
@@ -45,6 +44,7 @@ fn main() -> anyhow::Result<()> {
     let (ram_linker_script, ram_entry) = ram_path_entry
         .ok_or_else(|| anyhow!("MEMORY.RAM not found after scanning linker scripts"))?;
 
+    let output_path = argument_parser::get_output_path(&args)?;
     let elf = fs::read(output_path)?;
     let object = object::File::parse(&elf)?;
 
