@@ -1,17 +1,17 @@
 use std::{borrow::Cow, path::PathBuf};
 
-/// Get `output_path`, specified by `-o`
-pub fn get_output_path(args: &[String]) -> Option<&str> {
-    let mut next_is_output = false;
-    for arg in args {
-        if arg == "-o" {
-            next_is_output = true;
-        } else if next_is_output {
-            return Some(arg);
-        }
-    }
+use anyhow::anyhow;
 
-    None
+/// Get `output_path`, specified by `-o`
+pub fn get_output_path(args: &[String]) -> anyhow::Result<&String> {
+    args.windows(2)
+        .find_map(|x| {
+            if x[0] == "-o" {
+                return Some(&x[1]);
+            }
+            None
+        })
+        .ok_or_else(|| anyhow!("(BUG?) `-o` flag not found"))
 }
 
 /// Get `search_paths`, specified by `-L`

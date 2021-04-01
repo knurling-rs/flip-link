@@ -28,8 +28,7 @@ fn main() -> anyhow::Result<()> {
 
     let current_dir = env::current_dir()?;
     let linker_scripts = get_linker_scripts(&args, &current_dir)?;
-    let output_path = argument_parser::get_output_path(&args)
-        .ok_or_else(|| anyhow!("(BUG?) `-o` flag not found"))?;
+    let output_path = argument_parser::get_output_path(&args)?;
 
     // here we assume that we'll end with the same linker script as LLD
     // I'm unsure about how LLD picks a linker script when there are multiple candidates in the
