@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{borrow::Cow, path::PathBuf};
 
 /// Get `output_path`, specified by `-o`
 pub fn get_output_path(args: &[String]) -> Option<&str> {
@@ -21,6 +21,20 @@ pub fn get_search_paths(args: &[String]) -> Vec<PathBuf> {
             if x[0] == "-L" {
                 log::trace!("new search path: {}", x[1]);
                 return Some(PathBuf::from(&x[1]));
+            }
+            None
+        })
+        .collect::<Vec<_>>()
+}
+
+/// Get `search_targets`, the names of the linker scripts, specified by `-T`
+pub fn get_search_targets(args: &[String]) -> Vec<Cow<str>> {
+    args.iter()
+        .filter_map(|arg| {
+            const FLAG: &str = "-T";
+            if arg.starts_with(FLAG) {
+                let filename = &arg[FLAG.len()..];
+                return Some(Cow::Borrowed(filename));
             }
             None
         })

@@ -171,23 +171,11 @@ fn get_linker_scripts(args: &[String], current_dir: &Path) -> anyhow::Result<Vec
     let mut search_paths = argument_parser::get_search_paths(args);
     search_paths.push(current_dir.into());
 
-    // get names of linker scripts, passed via `-T`
-    // FIXME this doesn't handle "-T memory.x" (as two separate CLI arguments)
-    let mut search_list = args
-        .iter()
-        .filter_map(|arg| {
-            const FLAG: &str = "-T";
-            if arg.starts_with(FLAG) {
-                let filename = &arg[FLAG.len()..];
-                return Some(Cow::Borrowed(filename));
-            }
-            None
-        })
-        .collect::<Vec<_>>();
+    let mut search_targets = argument_parser::get_search_targets(args);
 
     // try to find all linker scripts from `search_list` in the `search_paths`
     let mut linker_scripts = vec![];
-    while let Some(filename) = search_list.pop() {
+    while let Some(filename) = search_targets.pop() {
         for dir in &search_paths {
             let full_path = dir.join(&*filename);
 
@@ -198,7 +186,7 @@ fn get_linker_scripts(args: &[String], current_dir: &Path) -> anyhow::Result<Vec
                 // also load linker scripts `INCLUDE`d by other scripts
                 for include in get_includes_from_linker_script(&contents) {
                     log::trace!("{} INCLUDEs {}", filename, include);
-                    search_list.push(Cow::Owned(include.to_string()));
+                    search_targets.push(Cow::Owned(include.to_string()));
                 }
 
                 linker_scripts.push(LinkerScript {
