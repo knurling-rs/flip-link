@@ -168,18 +168,8 @@ impl LinkerScript {
 }
 
 fn get_linker_scripts(args: &[String], current_dir: &Path) -> anyhow::Result<Vec<LinkerScript>> {
-    // search paths are the current dir and args passed by `-L`
-    let mut search_paths = args
-        .windows(2)
-        .filter_map(|x| {
-            if x[0] == "-L" {
-                log::trace!("new search path: {}", x[1]);
-                return Some(Path::new(&x[1]));
-            }
-            None
-        })
-        .collect::<Vec<_>>();
-    search_paths.push(current_dir);
+    let mut search_paths = argument_parser::get_search_paths(args);
+    search_paths.push(current_dir.into());
 
     // get names of linker scripts, passed via `-T`
     // FIXME this doesn't handle "-T memory.x" (as two separate CLI arguments)
