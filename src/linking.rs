@@ -3,7 +3,6 @@ use std::{path::Path, process::Command};
 use tempfile::TempDir;
 
 const EXIT_CODE_FAILURE: i32 = 1;
-// TODO make this configurable (via command-line flag or similar)
 const LINKER: &str = "rust-lld";
 
 pub fn link_normally(args: &[String]) -> Result<(), i32> {
