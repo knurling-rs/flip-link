@@ -90,7 +90,7 @@ fn main() -> anyhow::Result<()> {
     // commit file to disk
     drop(new_linker_script);
 
-    linking::link_again(&args, &current_dir, new_origin, &tempdir)
+    linking::link_modified(&args, &current_dir, new_origin, &tempdir)
         .unwrap_or_else(|code| process::exit(code));
 
     Ok(())

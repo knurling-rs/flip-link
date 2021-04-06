@@ -5,6 +5,7 @@ use tempfile::TempDir;
 const EXIT_CODE_FAILURE: i32 = 1;
 const LINKER: &str = "rust-lld";
 
+/// Normal linking with just the arguments the user provides
 pub fn link_normally(args: &[String]) -> Result<(), i32> {
     let mut c = Command::new(LINKER);
     c.args(args);
@@ -13,18 +14,23 @@ pub fn link_normally(args: &[String]) -> Result<(), i32> {
     success_or_exitstatus(c)
 }
 
-pub fn link_again(
+/// Re-link with modified arguments, which is the whole point of `flip-link`
+///
+/// See inline comments for details of the modifications.
+pub fn link_modified(
     args: &[String],
     current_dir: &Path,
     new_origin: u64,
     tempdir: &TempDir,
 ) -> Result<(), i32> {
     let mut c = Command::new(LINKER);
-    // add the current dir to the linker search path to include all unmodified scripts there
-    // HACK `-L` needs to go after `-flavor gnu`; position is currently hardcoded
-    c.args(&args[..2])
+    c
+        // HACK `-L` needs to go after `-flavor gnu`; position is currently hardcoded
+        .args(&args[..2])
+        // add the current dir to the linker search path to include all unmodified scripts there
         .arg("-L".to_string())
         .arg(current_dir)
+        // rest of arguments, except `-flavor gnu`
         .args(&args[2..])
         // we need to override `_stack_start` to make the stack start below fake RAM
         .arg(format!("--defsym=_stack_start={}", new_origin))
