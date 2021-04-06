@@ -4,7 +4,6 @@ mod linking;
 use std::{
     borrow::Cow,
     env,
-    ffi::OsStr,
     fs::{self, File},
     io::Write,
     ops::RangeInclusive,
@@ -160,8 +159,8 @@ impl LinkerScript {
         Self(path)
     }
 
-    fn file_name(&self) -> &OsStr {
-        self.path().file_name().unwrap()
+    fn file_name(&self) -> &str {
+        self.path().file_name().unwrap().to_str().unwrap()
     }
 
     fn path(&self) -> &Path {
