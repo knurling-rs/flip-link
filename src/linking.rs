@@ -1,17 +1,20 @@
-use std::{path::Path, process::Command};
+use std::{
+    io,
+    path::Path,
+    process::{Command, ExitStatus},
+};
 
 use tempfile::TempDir;
 
-const EXIT_CODE_FAILURE: i32 = 1;
 const LINKER: &str = "rust-lld";
 
 /// Normal linking with just the arguments the user provides
-pub fn link_normally(args: &[String]) -> Result<(), i32> {
+pub fn link_normally(args: &[String]) -> io::Result<ExitStatus> {
     let mut c = Command::new(LINKER);
     c.args(args);
     log::trace!("{:?}", c);
 
-    success_or_exitstatus(c)
+    c.status()
 }
 
 /// Re-link with modified arguments, which is the whole point of `flip-link`
@@ -22,7 +25,7 @@ pub fn link_modified(
     current_dir: &Path,
     new_origin: u64,
     tempdir: &TempDir,
-) -> Result<(), i32> {
+) -> io::Result<ExitStatus> {
     let mut c = Command::new(LINKER);
     c
         // HACK `-L` needs to go after `-flavor gnu`; position is currently hardcoded
@@ -39,13 +42,5 @@ pub fn link_modified(
         .current_dir(tempdir.path());
     log::trace!("{:?}", c);
 
-    success_or_exitstatus(c)
-}
-
-fn success_or_exitstatus(mut c: Command) -> Result<(), i32> {
-    let status = c.status().unwrap();
-    if !status.success() {
-        return Err(status.code().unwrap_or(EXIT_CODE_FAILURE));
-    }
-    Ok(())
+    c.status()
 }

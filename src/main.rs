@@ -14,6 +14,7 @@ use std::{
 use anyhow::anyhow;
 use object::{elf, Object as _, ObjectSection, SectionFlags};
 
+const EXIT_CODE_FAILURE: i32 = 1;
 /// Stack Pointer alignment required by the ARM architecture
 const SP_ALIGN: u64 = 8;
 
@@ -23,8 +24,13 @@ fn main() -> anyhow::Result<()> {
     // NOTE `skip` the name/path of the binary (first argument)
     let args = env::args().skip(1).collect::<Vec<_>>();
 
-    // if linking succeeds then linker scripts are well-formed; we'll rely on that in the parser
-    linking::link_normally(&args).unwrap_or_else(|code| process::exit(code));
+    {
+        // if linking succeeds then linker scripts are well-formed; we'll rely on that in the parser
+        let exit_status = linking::link_normally(&args)?;
+        if !exit_status.success() {
+            process::exit(exit_status.code().unwrap_or(EXIT_CODE_FAILURE))
+        }
+    }
 
     let current_dir = env::current_dir()?;
     let linker_scripts = get_linker_scripts(&args, &current_dir)?;
@@ -90,8 +96,12 @@ fn main() -> anyhow::Result<()> {
     // commit file to disk
     drop(new_linker_script);
 
-    linking::link_modified(&args, &current_dir, new_origin, &tempdir)
-        .unwrap_or_else(|code| process::exit(code));
+    {
+        let exit_status = linking::link_modified(&args, &current_dir, new_origin, &tempdir)?;
+        if !exit_status.success() {
+            process::exit(exit_status.code().unwrap_or(EXIT_CODE_FAILURE))
+        }
+    }
 
     Ok(())
 }
