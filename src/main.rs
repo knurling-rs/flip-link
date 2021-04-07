@@ -93,8 +93,7 @@ fn main() -> anyhow::Result<()> {
             writeln!(new_linker_script, "{}", line)?;
         }
     }
-    // commit file to disk
-    drop(new_linker_script);
+    new_linker_script.flush()?;
 
     {
         let exit_status = linking::link_modified(&args, &current_dir, &tempdir, new_origin)?;
