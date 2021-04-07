@@ -17,14 +17,29 @@ pub fn link_normally(args: &[String]) -> io::Result<ExitStatus> {
     c.status()
 }
 
-/// Re-link with modified arguments, which is the whole point of `flip-link`
+/// Link using a custom linker script and stack starting point. _(This is the whole point of `flip-link`)_
 ///
-/// See inline comments for details of the modifications.
+/// * `args` are arguments passed to the linker invocation
+/// * `current_dir` is the directory from which the linker was invoked
+/// * `stack_start` is the new, custom starting point from which our stack grows downwards–
+///   * this should be right *below* the `.bss+.data` region that we've moved to the top, e.g.:
+///     ```
+///      +-------------+
+///      | .bss+.data  |
+///      +-------------+ <-- `stack_start`
+///      |    stack    |
+///      |      |      |
+///      |      v      |
+///      | ~~~~~~~~~~~ |
+///      |             |
+///      +-------------+
+///     ```
+/// * `custom_linker_script_location` is the directory in which the linker script to be used is located
 pub fn link_modified(
     args: &[String],
     current_dir: &Path,
-    new_origin: u64,
-    tempdir: &TempDir,
+    custom_linker_script_location: &TempDir,
+    stack_start: u64,
 ) -> io::Result<ExitStatus> {
     let mut c = Command::new(LINKER);
     c
@@ -36,10 +51,10 @@ pub fn link_modified(
         // rest of arguments, except `-flavor gnu`
         .args(&args[2..])
         // we need to override `_stack_start` to make the stack start below fake RAM
-        .arg(format!("--defsym=_stack_start={}", new_origin))
+        .arg(format!("--defsym=_stack_start={}", stack_start))
         // set working directory to temporary directory containing our new linker script
         // this makes sure that it takes precedence over the original one
-        .current_dir(tempdir.path());
+        .current_dir(custom_linker_script_location.path());
     log::trace!("{:?}", c);
 
     c.status()

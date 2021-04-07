@@ -97,7 +97,7 @@ fn main() -> anyhow::Result<()> {
     drop(new_linker_script);
 
     {
-        let exit_status = linking::link_modified(&args, &current_dir, new_origin, &tempdir)?;
+        let exit_status = linking::link_modified(&args, &current_dir, &tempdir, new_origin)?;
         if !exit_status.success() {
             process::exit(exit_status.code().unwrap_or(EXIT_CODE_FAILURE))
         }
