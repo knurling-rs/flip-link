@@ -25,11 +25,11 @@ fn main() -> anyhow::Result<()> {
     let args = env::args().skip(1).collect::<Vec<_>>();
 
     {
-        // if linking succeeds then linker scripts are well-formed; we'll rely on that in the parser
         let exit_status = linking::link_normally(&args)?;
         if !exit_status.success() {
             process::exit(exit_status.code().unwrap_or(EXIT_CODE_FAILURE))
         }
+        // if linking succeeds then linker scripts are well-formed; we'll rely on that in the parser
     }
 
     let current_dir = env::current_dir()?;
