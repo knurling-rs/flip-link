@@ -1,3 +1,6 @@
+mod argument_parser;
+mod linking;
+
 use std::{
     borrow::Cow,
     env,
@@ -5,15 +8,13 @@ use std::{
     io::Write,
     ops::RangeInclusive,
     path::{Path, PathBuf},
-    process::{self, Command},
+    process,
 };
 
 use anyhow::anyhow;
 use object::{elf, Object as _, ObjectSection, SectionFlags};
 
 const EXIT_CODE_FAILURE: i32 = 1;
-// TODO make this configurable (via command-line flag or similar)
-const LINKER: &str = "rust-lld";
 /// Stack Pointer alignment required by the ARM architecture
 const SP_ALIGN: u64 = 8;
 
@@ -27,20 +28,16 @@ fn notmain() -> anyhow::Result<i32> {
     // NOTE `skip` the name/path of the binary (first argument)
     let args = env::args().skip(1).collect::<Vec<_>>();
 
-    // link normally
-    let mut c1 = Command::new(LINKER);
-    c1.args(&args);
-    log::trace!("{:?}", c1);
-    let status = c1.status()?;
-    if !status.success() {
-        return Ok(status.code().unwrap_or(EXIT_CODE_FAILURE));
+    {
+        let exit_status = linking::link_normally(&args)?;
+        if !exit_status.success() {
+            return Ok(exit_status.code().unwrap_or(EXIT_CODE_FAILURE));
+        }
+        // if linking succeeds then linker scripts are well-formed; we'll rely on that in the parser
     }
 
-    // if linking succeeds then linker scripts are well-formed; we'll rely on that in the parser
     let current_dir = env::current_dir()?;
     let linker_scripts = get_linker_scripts(&args, &current_dir)?;
-    let output_path =
-        get_output_path(&args).ok_or_else(|| anyhow!("(BUG?) `-o` flag not found"))?;
 
     // here we assume that we'll end with the same linker script as LLD
     // I'm unsure about how LLD picks a linker script when there are multiple candidates in the
@@ -57,6 +54,7 @@ fn notmain() -> anyhow::Result<i32> {
     let (ram_linker_script, ram_entry) = ram_path_entry
         .ok_or_else(|| anyhow!("MEMORY.RAM not found after scanning linker scripts"))?;
 
+    let output_path = argument_parser::get_output_path(&args)?;
     let elf = fs::read(output_path)?;
     let object = object::File::parse(&elf)?;
 
@@ -86,7 +84,7 @@ fn notmain() -> anyhow::Result<i32> {
     let tempdir = tempfile::tempdir()?;
     let original_linker_script = fs::read_to_string(ram_linker_script.path())?;
     // XXX in theory could collide with a user-specified linker script
-    let mut new_linker_script = File::create(tempdir.path().join(ram_linker_script.filename()))?;
+    let mut new_linker_script = File::create(tempdir.path().join(ram_linker_script.file_name()))?;
 
     for (index, line) in original_linker_script.lines().enumerate() {
         if index == ram_entry.line {
@@ -99,26 +97,13 @@ fn notmain() -> anyhow::Result<i32> {
             writeln!(new_linker_script, "{}", line)?;
         }
     }
-    // commit file to disk
-    drop(new_linker_script);
+    new_linker_script.flush()?;
 
-    // invoke the linker a second time
-    let mut c2 = Command::new(LINKER);
-    // add the current dir to the linker search path to include all unmodified scripts there
-    // HACK `-L` needs to go after `-flavor gnu`; position is currently hardcoded
-    c2.args(&args[..2])
-        .arg("-L".to_string())
-        .arg(current_dir)
-        .args(&args[2..])
-        // we need to override `_stack_start` to make the stack start below fake RAM
-        .arg(format!("--defsym=_stack_start={}", new_origin))
-        // set working directory to temporary directory containing our new linker script
-        // this makes sure that it takes precedence over the original one
-        .current_dir(tempdir.path());
-    log::trace!("{:?}", c2);
-    let status = c2.status()?;
-    if !status.success() {
-        return Ok(status.code().unwrap_or(EXIT_CODE_FAILURE));
+    {
+        let exit_status = linking::link_modified(&args, &current_dir, &tempdir, new_origin)?;
+        if !exit_status.success() {
+            return Ok(exit_status.code().unwrap_or(EXIT_CODE_FAILURE));
+        }
     }
 
     Ok(0)
@@ -179,52 +164,32 @@ fn round_down_to_nearest_multiple(x: u64, multiple: u64) -> u64 {
     x - (x % multiple)
 }
 
-struct LinkerScript {
-    filename: String,
-    full_path: PathBuf,
-}
+struct LinkerScript(PathBuf);
 
 impl LinkerScript {
-    fn filename(&self) -> &str {
-        &self.filename
+    fn new(path: PathBuf) -> Self {
+        assert!(path.is_file());
+        Self(path)
+    }
+
+    fn file_name(&self) -> &str {
+        self.path().file_name().unwrap().to_str().unwrap()
     }
 
     fn path(&self) -> &Path {
-        &self.full_path
+        &self.0
     }
 }
 
 fn get_linker_scripts(args: &[String], current_dir: &Path) -> anyhow::Result<Vec<LinkerScript>> {
-    // search paths are the current dir and args passed by `-L`
-    let mut search_paths = args
-        .windows(2)
-        .filter_map(|x| {
-            if x[0] == "-L" {
-                log::trace!("new search path: {}", x[1]);
-                return Some(Path::new(&x[1]));
-            }
-            None
-        })
-        .collect::<Vec<_>>();
-    search_paths.push(current_dir);
+    let mut search_paths = argument_parser::get_search_paths(args);
+    search_paths.push(current_dir.into());
 
-    // get names of linker scripts, passed via `-T`
-    // FIXME this doesn't handle "-T memory.x" (as two separate CLI arguments)
-    let mut search_list = args
-        .iter()
-        .filter_map(|arg| {
-            const FLAG: &str = "-T";
-            if arg.starts_with(FLAG) {
-                let filename = &arg[FLAG.len()..];
-                return Some(Cow::Borrowed(filename));
-            }
-            None
-        })
-        .collect::<Vec<_>>();
+    let mut search_targets = argument_parser::get_search_targets(args);
 
     // try to find all linker scripts from `search_list` in the `search_paths`
     let mut linker_scripts = vec![];
-    while let Some(filename) = search_list.pop() {
+    while let Some(filename) = search_targets.pop() {
         for dir in &search_paths {
             let full_path = dir.join(&*filename);
 
@@ -235,32 +200,16 @@ fn get_linker_scripts(args: &[String], current_dir: &Path) -> anyhow::Result<Vec
                 // also load linker scripts `INCLUDE`d by other scripts
                 for include in get_includes_from_linker_script(&contents) {
                     log::trace!("{} INCLUDEs {}", filename, include);
-                    search_list.push(Cow::Owned(include.to_string()));
+                    search_targets.push(Cow::Owned(include.to_string()));
                 }
 
-                linker_scripts.push(LinkerScript {
-                    filename: filename.into_owned(),
-                    full_path,
-                });
+                linker_scripts.push(LinkerScript::new(full_path));
                 break;
             }
         }
     }
 
     Ok(linker_scripts)
-}
-
-fn get_output_path(args: &[String]) -> Option<&str> {
-    let mut next_is_output = false;
-    for arg in args {
-        if arg == "-o" {
-            next_is_output = true;
-        } else if next_is_output {
-            return Some(arg);
-        }
-    }
-
-    None
 }
 
 /// Entry under the `MEMORY` section in a linker script
@@ -284,8 +233,8 @@ impl MemoryEntry {
 /// Rm `token` from beginning of `line`, else `continue` loop iteration
 macro_rules! eat {
     ($line:expr, $token:expr) => {
-        if $line.starts_with($token) {
-            $line[$token.len()..].trim()
+        if let Some(a) = $line.strip_prefix($token) {
+            a.trim()
         } else {
             continue;
         }
@@ -308,7 +257,7 @@ fn get_includes_from_linker_script(linker_script: &str) -> Vec<&str> {
 fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
     macro_rules! tryc {
         ($expr:expr) => {
-            if let Some(x) = $expr {
+            if let Ok(x) = $expr {
                 x
             } else {
                 continue;
@@ -321,7 +270,7 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
         line = eat!(line, "RAM");
 
         // jump over attributes like (xrw) see parse_attributes()
-        if let Some(i) = line.find(":") {
+        if let Some(i) = line.find(':') {
             line = line[i..].trim();
         }
 
@@ -329,12 +278,12 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
         line = eat!(line, "ORIGIN");
         line = eat!(line, "=");
 
-        let boundary_pos = tryc!(line.find(|c| c == ',' || c == ' '));
+        let boundary_pos = tryc!(line.find(|c| c == ',' || c == ' ').ok_or(()));
         const HEX: &str = "0x";
         let origin = if line.starts_with(HEX) {
-            tryc!(u64::from_str_radix(&line[HEX.len()..boundary_pos], 16).ok())
+            tryc!(u64::from_str_radix(&line[HEX.len()..boundary_pos], 16))
         } else {
-            tryc!(line[..boundary_pos].parse().ok())
+            tryc!(line[..boundary_pos].parse())
         };
         line = &line[boundary_pos..].trim();
 
@@ -347,8 +296,8 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
         for segment in segments {
             let boundary_pos = segment
                 .find(|c| c == 'K' || c == 'M')
-                .unwrap_or(segment.len());
-            let length: u64 = tryc!(segment[..boundary_pos].parse().ok());
+                .unwrap_or_else(|| segment.len());
+            let length: u64 = tryc!(segment[..boundary_pos].parse());
             let raw = &segment[boundary_pos..];
             let mut chars = raw.chars();
             let unit = chars.next();
