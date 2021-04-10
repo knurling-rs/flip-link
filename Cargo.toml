@@ -14,5 +14,5 @@ readme = "README.md"
 anyhow = "1.0.32"
 env_logger = "0.8.3"
 log = "0.4.11"
-object = "0.23.0"
+object = { version = "0.23.0", default-features = false, features = ["read_core", "elf", "std"] }
 tempfile = "3.1.0"
