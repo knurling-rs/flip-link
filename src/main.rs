@@ -233,8 +233,8 @@ impl MemoryEntry {
 /// Rm `token` from beginning of `line`, else `continue` loop iteration
 macro_rules! eat {
     ($line:expr, $token:expr) => {
-        if $line.starts_with($token) {
-            $line[$token.len()..].trim()
+        if let Some(a) = $line.strip_prefix($token) {
+            a.trim()
         } else {
             continue;
         }
@@ -257,7 +257,7 @@ fn get_includes_from_linker_script(linker_script: &str) -> Vec<&str> {
 fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
     macro_rules! tryc {
         ($expr:expr) => {
-            if let Some(x) = $expr {
+            if let Ok(x) = $expr {
                 x
             } else {
                 continue;
@@ -270,7 +270,7 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
         line = eat!(line, "RAM");
 
         // jump over attributes like (xrw) see parse_attributes()
-        if let Some(i) = line.find(":") {
+        if let Some(i) = line.find(':') {
             line = line[i..].trim();
         }
 
@@ -278,12 +278,12 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
         line = eat!(line, "ORIGIN");
         line = eat!(line, "=");
 
-        let boundary_pos = tryc!(line.find(|c| c == ',' || c == ' '));
+        let boundary_pos = tryc!(line.find(|c| c == ',' || c == ' ').ok_or(()));
         const HEX: &str = "0x";
         let origin = if line.starts_with(HEX) {
-            tryc!(u64::from_str_radix(&line[HEX.len()..boundary_pos], 16).ok())
+            tryc!(u64::from_str_radix(&line[HEX.len()..boundary_pos], 16))
         } else {
-            tryc!(line[..boundary_pos].parse().ok())
+            tryc!(line[..boundary_pos].parse())
         };
         line = &line[boundary_pos..].trim();
 
@@ -296,8 +296,8 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
         for segment in segments {
             let boundary_pos = segment
                 .find(|c| c == 'K' || c == 'M')
-                .unwrap_or(segment.len());
-            let length: u64 = tryc!(segment[..boundary_pos].parse().ok());
+                .unwrap_or_else(|| segment.len());
+            let length: u64 = tryc!(segment[..boundary_pos].parse());
             let raw = &segment[boundary_pos..];
             let mut chars = raw.chars();
             let unit = chars.next();

@@ -32,8 +32,7 @@ pub fn get_search_targets(args: &[String]) -> Vec<Cow<str>> {
     args.iter()
         .filter_map(|arg| {
             const FLAG: &str = "-T";
-            if arg.starts_with(FLAG) {
-                let filename = &arg[FLAG.len()..];
+            if let Some(filename) = arg.strip_prefix(FLAG) {
                 return Some(Cow::Borrowed(filename));
             }
             None
