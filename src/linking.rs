@@ -46,7 +46,7 @@ pub fn link_modified(
         // HACK `-L` needs to go after `-flavor gnu`; position is currently hardcoded
         .args(&args[..2])
         // add the current dir to the linker search path to include all unmodified scripts there
-        .arg("-L".to_string())
+        .arg("-L")
         .arg(current_dir)
         // rest of arguments, except `-flavor gnu`
         .args(&args[2..])
