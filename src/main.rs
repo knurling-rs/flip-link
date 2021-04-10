@@ -19,6 +19,10 @@ const EXIT_CODE_FAILURE: i32 = 1;
 const SP_ALIGN: u64 = 8;
 
 fn main() -> anyhow::Result<()> {
+    notmain().map(|code| process::exit(code))
+}
+
+fn notmain() -> anyhow::Result<i32> {
     env_logger::init();
 
     // NOTE `skip` the name/path of the binary (first argument)
@@ -27,7 +31,7 @@ fn main() -> anyhow::Result<()> {
     {
         let exit_status = linking::link_normally(&args)?;
         if !exit_status.success() {
-            process::exit(exit_status.code().unwrap_or(EXIT_CODE_FAILURE))
+            return Ok(exit_status.code().unwrap_or(EXIT_CODE_FAILURE));
         }
         // if linking succeeds then linker scripts are well-formed; we'll rely on that in the parser
     }
@@ -98,11 +102,11 @@ fn main() -> anyhow::Result<()> {
     {
         let exit_status = linking::link_modified(&args, &current_dir, &tempdir, new_origin)?;
         if !exit_status.success() {
-            process::exit(exit_status.code().unwrap_or(EXIT_CODE_FAILURE))
+            return Ok(exit_status.code().unwrap_or(EXIT_CODE_FAILURE));
         }
     }
 
-    Ok(())
+    Ok(0)
 }
 
 /// Returns `(used_ram_length, used_ram_align)`
