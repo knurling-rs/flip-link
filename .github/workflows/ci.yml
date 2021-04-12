@@ -36,13 +36,21 @@ jobs:
       - name: Build
         run: RUSTFLAGS='--deny warnings' cargo build
         shell: bash
-      - name: Check fmt
-        # we only need to check fmt on one OS and
-        # fmt should only be checked on stable
-        if: matrix.os == 'ubuntu-latest' && matrix.rust == 'stable'
-        run: |
-          rustup component add rustfmt
-          cargo fmt --all -- --check
+
+  static-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: clippy, rustfmt
+      - run: cargo fmt --all -- --check
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   build_app:
     strategy:
@@ -79,8 +87,9 @@ jobs:
     name: ci
     if: success()
     needs:
-      - test
       - build_app
+      - static-checks
+      - test
     runs-on: ubuntu-latest
     steps:
       - name: CI succeeded
