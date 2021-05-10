@@ -55,8 +55,8 @@ fn notmain() -> anyhow::Result<i32> {
         .ok_or_else(|| anyhow!("MEMORY.RAM not found after scanning linker scripts"))?;
 
     let output_path = argument_parser::get_output_path(&args)?;
-    let elf = fs::read(output_path)?;
-    let object = object::File::parse(&elf)?;
+    let elf = &*fs::read(output_path)?;
+    let object = object::File::parse(elf)?;
 
     // TODO assert that `_stack_start == ORIGIN(RAM) + LENGTH(RAM)`
     // if that's not the case the user has specified a custom location for the stack; we should
