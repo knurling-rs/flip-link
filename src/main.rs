@@ -305,6 +305,8 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
                 total_length += length * 1024;
             } else if unit == Some('M') {
                 total_length += length * 1024 * 1024;
+            } else if unit == None {
+                total_length += length;
             }
         }
         return Some(MemoryEntry {
@@ -327,6 +329,32 @@ mod tests {
 {
   FLASH : ORIGIN = 0x00000000, LENGTH = 256K
   RAM : ORIGIN = 0x20000000, LENGTH = 64K
+}
+
+INCLUDE device.x
+";
+
+        assert_eq!(
+            find_ram_in_linker_script(LINKER_SCRIPT),
+            Some(MemoryEntry {
+                line: 3,
+                origin: 0x20000000,
+                length: 64 * 1024,
+            })
+        );
+
+        assert_eq!(
+            get_includes_from_linker_script(LINKER_SCRIPT),
+            vec!["device.x"]
+        );
+    }
+
+    #[test]
+    fn parse_no_units() {
+        const LINKER_SCRIPT: &str = "MEMORY
+{
+  FLASH : ORIGIN = 0x00000000, LENGTH = 262144
+  RAM : ORIGIN = 0x20000000, LENGTH = 65536
 }
 
 INCLUDE device.x
