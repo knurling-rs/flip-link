@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.1.4] - 2021-05-21
+
+- [#38] Handle no units in linker script parser
+
+[#38]: https://github.com/knurling-rs/flip-link/pull/38
+
 ## [v0.1.3] - 2021-04-26
 
 ### Improvements
@@ -50,7 +56,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Initial release
 
-[Unreleased]: https://github.com/knurling-rs/flip-link/compare/v0.1.3...main
+[Unreleased]: https://github.com/knurling-rs/flip-link/compare/v0.1.4...main
+[v0.1.4]: https://github.com/knurling-rs/flip-link/compare/v0.1.3...v0.1.4
 [v0.1.3]: https://github.com/knurling-rs/flip-link/compare/v0.1.2...v0.1.3
 [v0.1.2]: https://github.com/knurling-rs/flip-link/compare/v0.1.1...v0.1.2
 [v0.1.1]: https://github.com/knurling-rs/flip-link/compare/v0.1.0...v0.1.1
