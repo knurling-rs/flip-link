@@ -16,3 +16,6 @@ env_logger = "0.8"
 log = "0.4"
 object = { version = "0.25", default-features = false, features = ["read_core", "elf", "std"] }
 tempfile = "3.2"
+
+[dev-dependencies]
+assert_cmd = "1.0"

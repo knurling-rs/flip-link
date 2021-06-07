@@ -10,7 +10,6 @@ on:
     - cron: '1 0 * * *'
 env:
   CARGO_TERM_COLOR: always
-  APP_NAME: test-flip-link-app
   CORE_TARGET: thumbv7m-none-eabi # needed by `core`
 
 jobs:
@@ -25,7 +24,7 @@ jobs:
           - macOS-latest
           - windows-latest
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -33,9 +32,11 @@ jobs:
           profile: minimal
           toolchain: ${{ matrix.rust }}
           override: true
+          target: ${{ env.CORE_TARGET }}
       - name: Build
         run: RUSTFLAGS='--deny warnings' cargo build
         shell: bash
+      - run: cargo test
 
   static-checks:
     runs-on: ubuntu-latest
@@ -52,42 +53,12 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-  build_app:
-    strategy:
-      matrix:
-        rust:
-          - stable
-          - nightly
-        os:
-          - ubuntu-latest
-          - macOS-latest
-          - windows-latest
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
-    steps:
-      - name: Check out flip-link repo
-        uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: ${{ matrix.rust }}
-          override: true
-          target: ${{ env.CORE_TARGET }}
-      - name: Install dependencies
-        run: |
-          cargo install --debug --path .
-      - name: Build App
-        run: |
-          cd ${{ env.APP_NAME }}
-          cargo build --examples
-
   # Refs: https://github.com/rust-lang/crater/blob/9ab6f9697c901c4a44025cf0a39b73ad5b37d198/.github/workflows/bors.yml#L125-L149
   # bors.tech integration
   ci-success:
     name: ci
     if: success()
     needs:
-      - build_app
       - static-checks
       - test
     runs-on: ubuntu-latest
