@@ -40,6 +40,11 @@ fn should_verify_memory_layout() -> anyhow::Result<()> {
         let (bss, data, uninit, vector_table) = elf::get_sections(&object)?;
         // compute the initial stack-pointer from `.vector_table`
         let initial_sp = elf::compute_initial_sp(&vector_table)?;
+        // get the bounds of 'static RAM'
+        let bounds = elf::get_bounds(&[data, bss, uninit])?;
+
+        // Is the initial stack-pointer inside 'static RAM'?
+        assert!(bounds.contains(&initial_sp));
     }
 
     // ---
@@ -76,7 +81,7 @@ mod cargo {
 }
 
 mod elf {
-    use std::convert::TryInto;
+    use std::{convert::TryInto, ops::RangeInclusive};
 
     use anyhow::anyhow;
     use object::{File, Object, ObjectSection, Section};
@@ -91,6 +96,21 @@ mod elf {
         let data = vector_table.uncompressed_data()?;
         let sp = u32::from_le_bytes(data[..4].try_into()?);
         Ok(sp as u64)
+    }
+
+    /// Get [`RangeInclusive`] from lowest to highest address of all sections
+    pub fn get_bounds(sections: &[Section]) -> anyhow::Result<RangeInclusive<u64>> {
+        // get beginning and end of all sections
+        let addresses = sections
+            .iter()
+            .flat_map(|sec| vec![sec.address(), sec.address() + sec.size()])
+            .collect::<Vec<_>>();
+
+        // get highest and lowest address of all sections
+        let min = *addresses.iter().min().ok_or(anyhow!("empty iterator"))?;
+        let max = *addresses.iter().max().ok_or(anyhow!("empty iterator"))?;
+
+        Ok(min..=max)
     }
 
     /// Get the following sections from the elf-file:
