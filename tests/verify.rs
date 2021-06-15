@@ -3,7 +3,7 @@ const CRATE: &str = "test-flip-link-app";
 #[test]
 fn should_link_example_firmware() -> anyhow::Result<()> {
     // Arrange
-    cargo::install_flip_link();
+    cargo::check_flip_link();
 
     // Act
     cargo::build_example_firmware()?;
@@ -34,9 +34,10 @@ mod cargo {
         Ok(())
     }
 
-    pub fn install_flip_link() {
-        Command::new("cargo")
-            .args(&["install", "--path", "."])
+    /// Check that `flip-link` is present on the system
+    pub fn check_flip_link() {
+        Command::new("which")
+            .arg("flip-link")
             .unwrap()
             .assert()
             .success();
