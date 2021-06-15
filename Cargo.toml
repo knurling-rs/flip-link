@@ -19,3 +19,6 @@ tempfile = "3.2"
 
 [dev-dependencies]
 assert_cmd = "1.0"
+
+[workspace]
+members = [".", "xtask"]
