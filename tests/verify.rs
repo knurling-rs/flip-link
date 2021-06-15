@@ -6,9 +6,10 @@ fn should_link_example_firmware() -> anyhow::Result<()> {
     cargo::check_flip_link();
 
     // Act
-    cargo::build_example_firmware(CRATE)?;
+    let cmd = cargo::build_example_firmware(CRATE);
 
     // Assert
+    cmd.success();
 
     // ---
     Ok(())
@@ -17,12 +18,13 @@ fn should_link_example_firmware() -> anyhow::Result<()> {
 mod cargo {
     use std::process::Command;
 
-    use assert_cmd::prelude::*;
+    use assert_cmd::{assert::Assert, prelude::*};
 
     /// Build all examples in `$REPO/$rel_path`
-    pub fn build_example_firmware(rel_path: &str) -> anyhow::Result<()> {
+    #[must_use]
+    pub fn build_example_firmware(rel_path: &str) -> Assert {
         // append `rel_path` to the current working directory
-        let mut firmware_dir = std::env::current_dir()?;
+        let mut firmware_dir = std::env::current_dir().unwrap();
         firmware_dir.push(rel_path);
 
         Command::new("cargo")
@@ -30,8 +32,6 @@ mod cargo {
             .current_dir(firmware_dir)
             .unwrap()
             .assert()
-            .success();
-        Ok(())
     }
 
     /// Check that `flip-link` is present on the system
