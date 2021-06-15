@@ -6,7 +6,7 @@ fn should_link_example_firmware() -> anyhow::Result<()> {
     cargo::check_flip_link();
 
     // Act
-    cargo::build_example_firmware()?;
+    cargo::build_example_firmware(CRATE)?;
 
     // Assert
 
@@ -19,11 +19,11 @@ mod cargo {
 
     use assert_cmd::prelude::*;
 
-    use super::CRATE;
-
-    pub fn build_example_firmware() -> anyhow::Result<()> {
+    /// Build all examples in `$REPO/$rel_path`
+    pub fn build_example_firmware(rel_path: &str) -> anyhow::Result<()> {
+        // append `rel_path` to the current working directory
         let mut firmware_dir = std::env::current_dir()?;
-        firmware_dir.push(CRATE);
+        firmware_dir.push(rel_path);
 
         Command::new("cargo")
             .args(&["build", "--examples"])
