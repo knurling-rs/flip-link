@@ -2,12 +2,12 @@ name: CI
 
 on:
   push:
-    branches: [ main, staging, trying ]
+    branches: [main, staging, trying]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   schedule:
     # runs 1 min after 2 or 1 AM (summer/winter) berlin time
-    - cron: '1 0 * * *'
+    - cron: "1 0 * * *"
 env:
   CARGO_TERM_COLOR: always
   CORE_TARGET: thumbv7m-none-eabi # needed by `core`
@@ -33,9 +33,11 @@ jobs:
           toolchain: ${{ matrix.rust }}
           override: true
           target: ${{ env.CORE_TARGET }}
-      - name: Build
-        run: RUSTFLAGS='--deny warnings' cargo build
+      - run: RUSTFLAGS='--deny warnings' cargo build
         shell: bash
+
+      - name: Install flip-link
+        run: cargo install --debug --locked --path .
       - run: cargo test
 
   static-checks:
