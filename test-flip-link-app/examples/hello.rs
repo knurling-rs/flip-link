@@ -1,11 +1,10 @@
 #![no_main]
 #![no_std]
 
-use panic_semihosting as _;
-
 use cortex_m_rt::entry;
 use cortex_m_semihosting::{debug, hprintln};
 use lm3s6965 as _;
+use panic_semihosting as _;
 
 #[entry]
 fn main() -> ! {

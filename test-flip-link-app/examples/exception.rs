@@ -2,13 +2,11 @@
 #![no_main]
 #![no_std]
 
-use panic_semihosting as _;
-
-use cortex_m::peripheral::syst::SystClkSource;
-use cortex_m::Peripherals;
+use cortex_m::{peripheral::syst::SystClkSource, Peripherals};
 use cortex_m_rt::{entry, exception};
 use cortex_m_semihosting::hprint;
 use lm3s6965 as _;
+use panic_semihosting as _;
 
 #[entry]
 fn main() -> ! {
