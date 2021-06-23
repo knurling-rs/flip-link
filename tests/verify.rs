@@ -33,7 +33,7 @@ fn should_verify_memory_layout() -> anyhow::Result<()> {
     // Assert
     for elf_path in elf::paths() {
         // read and parse elf-file
-        let elf = fs::read(elf_path)?;
+        let elf = fs::read(&elf_path)?;
         let object = object::File::parse(&*elf)?;
 
         // get the relevant sections
@@ -43,8 +43,8 @@ fn should_verify_memory_layout() -> anyhow::Result<()> {
         // get the bounds of 'static RAM'
         let bounds = elf::get_bounds(&[data, bss, uninit])?;
 
-        // Is the initial stack-pointer inside 'static RAM'?
-        assert!(bounds.contains(&initial_sp));
+        // Is the initial stack-pointer below 'static RAM'?
+        assert!(initial_sp <= *bounds.start(),);
     }
 
     // ---
@@ -81,7 +81,7 @@ mod cargo {
 }
 
 mod elf {
-    use std::{convert::TryInto, ops::RangeInclusive};
+    use std::{convert::TryInto, ops::RangeInclusive, path::PathBuf};
 
     use anyhow::anyhow;
     use object::{File, Object, ObjectSection, Section};
@@ -142,10 +142,11 @@ mod elf {
     }
 
     /// Paths to firmware binaries.
-    pub fn paths() -> Vec<String> {
+    pub fn paths() -> Vec<PathBuf> {
         FILES
             .iter()
             .map(|file_name| format!("{}/target/{}/debug/examples/{}", CRATE, TARGET, file_name))
+            .map(|file_path| PathBuf::from(file_path))
             .collect()
     }
 }
