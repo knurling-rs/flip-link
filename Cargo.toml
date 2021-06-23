@@ -21,4 +21,4 @@ tempfile = "3.2"
 assert_cmd = "1.0"
 
 [workspace]
-members = [".", "xtask"]
+members = [".", "xtest"]
