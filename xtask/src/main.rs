@@ -15,7 +15,7 @@ mod cargo {
     /// Install local revision of `flip-link`.
     pub fn install_flip_link() -> anyhow::Result<()> {
         let status = Command::new("cargo")
-            .args(&["install", "--path", "."])
+            .args(&["install", "--debug", "--path", "."])
             .status()?;
         match status.success() {
             false => Err(anyhow::anyhow!("installing flip-link from path")),
