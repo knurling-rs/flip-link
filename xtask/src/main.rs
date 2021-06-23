@@ -12,13 +12,15 @@ fn main() -> anyhow::Result<()> {
 mod cargo {
     use std::process::Command;
 
+    use anyhow::anyhow;
+
     /// Install local revision of `flip-link`.
     pub fn install_flip_link() -> anyhow::Result<()> {
         let status = Command::new("cargo")
             .args(&["install", "--debug", "--path", "."])
             .status()?;
         match status.success() {
-            false => Err(anyhow::anyhow!("installing flip-link from path")),
+            false => Err(anyhow!("installing flip-link from path")),
             true => Ok(()),
         }
     }
@@ -26,7 +28,7 @@ mod cargo {
     pub fn test() -> anyhow::Result<()> {
         let status = Command::new("cargo").arg("test").status()?;
         match status.success() {
-            false => Err(anyhow::anyhow!("running `cargo test`")),
+            false => Err(anyhow!("running `cargo test`")),
             true => Ok(()),
         }
     }
