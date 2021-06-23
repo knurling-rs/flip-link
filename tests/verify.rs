@@ -25,6 +25,30 @@ fn should_link_example_firmware(#[case] default_features: bool) {
     cmd.success();
 }
 
+/// ## situation
+/// * `bounds` range spans all static variables in RAM
+/// * `flip-link` will put the stack *right below* that
+/// * we want to check (assert) that the stack and the static variables do *not* overlap
+/// 
+/// ## problem
+/// The tricky bit is that `initial_sp` points to the start of the stack but when you use the stack *that* address will not be written to: data is written to the address immediately *below* that (this is because on ARM the stack is of the *full descending* type).
+/// 
+/// So if the SP is `0x2000_3000` and you push `0xAAAA_AAAA` (32-bit word) onto it the memory that is written is:
+/// - `0x2000_3000` this address is not written to
+/// - `0x2000_2FFF` = 0xAA
+/// - `0x2000_2FFE` = 0xAA
+/// - `0x2000_2FFD` = 0xAA
+/// - `0x2000_2FFC` = 0xAA
+/// - new SP value = `0x2000_2FFC`
+/// 
+/// On the other hand if you have a static variable located at `0x2000_3000` and write to it then address `0x2000_3000` will be written to. Thus `initial_sp` can be equal to `bounds.start()`.
+/// 
+/// ## cases
+/// 1. `initial_sp <= bounds.start` = OK (stack is below static variables)
+/// 2. `initial_sp > bounds.start && initial_sp < bounds.end` = BAD (overlap)
+/// 3. `initial_sp > bounds.end` = BAD (stack is *above* static variables -> if the stack grows it could corrupt static variables)
+///
+/// We are only asserting case one, because if it is true it excludes the other two cases.
 #[test]
 fn should_verify_memory_layout() -> Result<()> {
     // Arrange
