@@ -95,7 +95,7 @@ NOTE that if you were using GNU `ld` or GNU `gcc` to link your program then this
 ## Testing
 
 Our CI enforces various checks. You can run them locally to make sure your PR will pass the CI:
-* `cargo fmt -- --check`
+* `cargo fmt --all -- --check`
 * `cargo clippy -- --deny warnings`
 * `cargo xtest`
   * This installs the current revision of `flip-link` and runs `cargo test`.
