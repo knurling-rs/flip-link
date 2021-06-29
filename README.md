@@ -88,10 +88,17 @@ rustflags = [
 ]
 ```
 
-NOTE that if you were using GNU `ld` or GNU `gcc` to link your program then this
-won't work. Support for other linkers is being tracked in [issue #1]
+NOTE that if you were using GNU `ld` or GNU `gcc` to link your program then this won't work. Support for other linkers is being tracked in [issue #1].
 
 [issue #1]: https://github.com/knurling-rs/flip-link/issues/1
+
+## Testing
+
+Our CI enforces various checks. You can run them locally to make sure your PR will pass the CI:
+* `cargo fmt --all -- --check`
+* `cargo clippy -- --deny warnings`
+* `cargo xtest`
+  * This installs the current revision of `flip-link` and runs `cargo test`.
 
 ## Support
 

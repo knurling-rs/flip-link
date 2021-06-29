@@ -1,0 +1,2 @@
+[alias]
+xtest = "run --package xtest --"
