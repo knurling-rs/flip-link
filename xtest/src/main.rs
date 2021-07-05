@@ -26,7 +26,10 @@ mod cargo {
     }
 
     pub fn test() -> anyhow::Result<()> {
-        let status = Command::new("cargo").arg("test").status()?;
+        let status = Command::new("cargo")
+            // `--test-threads=1` prevents race conditions accessing the elf-file
+            .args(&["test", "--", "--test-threads=1"])
+            .status()?;
         match status.success() {
             false => Err(anyhow!("running `cargo test`")),
             true => Ok(()),
