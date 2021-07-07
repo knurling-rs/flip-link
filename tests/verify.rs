@@ -1,5 +1,7 @@
 use std::fs;
 
+use rstest::rstest;
+
 /// Path to test app
 const CRATE: &str = "test-flip-link-app";
 /// Example firmware in `$CRATE/examples`
@@ -7,13 +9,15 @@ const FILES: [&str; 4] = ["crash", "exception", "hello", "panic"];
 /// Compilation target firmware is build for
 const TARGET: &str = "thumbv7m-none-eabi";
 
-#[test]
-fn should_link_example_firmware() -> anyhow::Result<()> {
+#[rstest]
+#[case::normal(true)]
+#[case::custom_linkerscript(false)]
+fn should_link_example_firmware(#[case] default_features: bool) -> anyhow::Result<()> {
     // Arrange
     cargo::check_flip_link();
 
     // Act
-    let cmd = cargo::build_example_firmware(CRATE);
+    let cmd = cargo::build_example_firmware(CRATE, default_features);
 
     // Assert
     cmd.success();
@@ -28,7 +32,7 @@ fn should_verify_memory_layout() -> anyhow::Result<()> {
     cargo::check_flip_link();
 
     // Act
-    cargo::build_example_firmware(CRATE).success();
+    cargo::build_example_firmware(CRATE, true).success();
 
     // Assert
     for elf_path in elf::paths() {
@@ -58,13 +62,19 @@ mod cargo {
 
     /// Build all examples in `$REPO/$rel_path`
     #[must_use]
-    pub fn build_example_firmware(rel_path: &str) -> Assert {
+    pub fn build_example_firmware(rel_path: &str, default_features: bool) -> Assert {
         // append `rel_path` to the current working directory
         let mut firmware_dir = std::env::current_dir().unwrap();
         firmware_dir.push(rel_path);
 
+        // disable default features or use `-v` as a no-op
+        let default_features = match default_features {
+            false => "--no-default-features",
+            true => "-v",
+        };
+
         Command::new("cargo")
-            .args(&["build", "--examples"])
+            .args(&["build", "--examples", default_features])
             .current_dir(firmware_dir)
             .unwrap()
             .assert()

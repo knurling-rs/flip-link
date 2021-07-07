@@ -5,6 +5,7 @@
 use cortex_m::{peripheral::syst::SystClkSource, Peripherals};
 use cortex_m_rt::{entry, exception};
 use cortex_m_semihosting::hprint;
+#[cfg(feature = "lm3s6965")]
 use lm3s6965 as _;
 use panic_semihosting as _;
 

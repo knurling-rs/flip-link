@@ -19,6 +19,7 @@ tempfile = "3.2"
 
 [dev-dependencies]
 assert_cmd = "1.0"
+rstest = "0.10"
 
 [workspace]
 members = [".", "xtest"]
