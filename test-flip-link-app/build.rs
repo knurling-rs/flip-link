@@ -1,6 +1,6 @@
 fn main() -> anyhow::Result<()> {
     // include following if hal is excluded (aka. default features are disabled)
-    #[cfg(not(feature = "default"))]
+    #[cfg(not(feature = "lm3s6965"))]
     {
         use std::{env, fs::File, io::Write, path::PathBuf};
 

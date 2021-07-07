@@ -2,7 +2,7 @@
 #![no_std]
 
 use cortex_m_rt::entry;
-#[cfg(feature = "default")]
+#[cfg(feature = "lm3s6965")]
 use lm3s6965 as _;
 use panic_semihosting as _;
 
