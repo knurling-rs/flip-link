@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- [#49] Fix Clippy warnings
+- [#46] Link Knurling User Survey in `README`
+- [#42] Add tests to check generation of `memory.x` in project root
+- [#45] `Cargo.toml`: Disable default features of `env_logger`
+- [#44] Add helper crate `xtest`
+- [#41] Verify initial stack-pointer to be inside static RAM
+
+[#49]: https://github.com/knurling-rs/flip-link/pull/49
+[#46]: https://github.com/knurling-rs/flip-link/pull/46
+[#42]: https://github.com/knurling-rs/flip-link/pull/42
+[#45]: https://github.com/knurling-rs/flip-link/pull/45
+[#44]: https://github.com/knurling-rs/flip-link/pull/44
+[#41]: https://github.com/knurling-rs/flip-link/pull/41
+
 ## [v0.1.4] - 2021-05-21
 
 - [#38] Handle no units in linker script parser
