@@ -285,7 +285,7 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
         } else {
             tryc!(line[..boundary_pos].parse())
         };
-        line = &line[boundary_pos..].trim();
+        line = line[boundary_pos..].trim();
 
         line = eat!(line, ",");
         line = eat!(line, "LENGTH");
