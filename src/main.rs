@@ -81,32 +81,52 @@ fn notmain() -> anyhow::Result<i32> {
     );
 
     // to overwrite RAM we'll create a new linker script in a temporary directory
-    let tempdir = tempfile::tempdir()?;
-    let original_linker_script = fs::read_to_string(ram_linker_script.path())?;
-    // XXX in theory could collide with a user-specified linker script
-    let mut new_linker_script = File::create(tempdir.path().join(ram_linker_script.file_name()))?;
+    let exit_status = in_tempdir(|tempdir| {
+        let original_linker_script = fs::read_to_string(ram_linker_script.path())?;
+        // XXX in theory could collide with a user-specified linker script
+        let mut new_linker_script = File::create(tempdir.join(ram_linker_script.file_name()))?;
 
-    for (index, line) in original_linker_script.lines().enumerate() {
-        if index == ram_entry.line {
-            writeln!(
-                new_linker_script,
-                "  RAM : ORIGIN = {:#x}, LENGTH = {}",
-                new_origin, new_length
-            )?;
-        } else {
-            writeln!(new_linker_script, "{}", line)?;
+        for (index, line) in original_linker_script.lines().enumerate() {
+            if index == ram_entry.line {
+                writeln!(
+                    new_linker_script,
+                    "  RAM : ORIGIN = {:#x}, LENGTH = {}",
+                    new_origin, new_length
+                )?;
+            } else {
+                writeln!(new_linker_script, "{}", line)?;
+            }
         }
-    }
-    new_linker_script.flush()?;
+        new_linker_script.flush()?;
 
-    {
-        let exit_status = linking::link_modified(&args, &current_dir, &tempdir, new_origin)?;
-        if !exit_status.success() {
-            return Ok(exit_status.code().unwrap_or(EXIT_CODE_FAILURE));
-        }
+        let exit_status = linking::link_modified(&args, &current_dir, tempdir, new_origin)?;
+        Ok(exit_status)
+    })?;
+
+    if !exit_status.success() {
+        return Ok(exit_status.code().unwrap_or(EXIT_CODE_FAILURE));
     }
 
     Ok(0)
+}
+
+fn in_tempdir<T>(cb: impl FnOnce(&Path) -> anyhow::Result<T>) -> anyhow::Result<T> {
+    // We avoid the `tempfile` crate because it pulls in quite a few dependencies.
+
+    let mut random = [0; 8];
+    getrandom::getrandom(&mut random).map_err(|e| anyhow::anyhow!(e))?;
+
+    let mut path = std::env::temp_dir();
+    path.push(format!("flip-link-{:02x?}", random));
+    fs::create_dir(&path)?;
+
+    let res = cb(&path);
+
+    // Just in case https://github.com/rust-lang/rust/issues/29497 hits us, we ignore the error from
+    // removing the directory and just let it linger until the machine reboots ¯\_(ツ)_/¯.
+    let _ = fs::remove_dir_all(&path);
+
+    res
 }
 
 /// Returns `(used_ram_length, used_ram_align)`

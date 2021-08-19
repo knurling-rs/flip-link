@@ -4,8 +4,6 @@ use std::{
     process::{Command, ExitStatus},
 };
 
-use tempfile::TempDir;
-
 const LINKER: &str = "rust-lld";
 
 /// Normal linking with just the arguments the user provides
@@ -38,7 +36,7 @@ pub fn link_normally(args: &[String]) -> io::Result<ExitStatus> {
 pub fn link_modified(
     args: &[String],
     current_dir: &Path,
-    custom_linker_script_location: &TempDir,
+    custom_linker_script_dir: &Path,
     stack_start: u64,
 ) -> io::Result<ExitStatus> {
     let mut c = Command::new(LINKER);
@@ -54,7 +52,7 @@ pub fn link_modified(
         .arg(format!("--defsym=_stack_start={}", stack_start))
         // set working directory to temporary directory containing our new linker script
         // this makes sure that it takes precedence over the original one
-        .current_dir(custom_linker_script_location.path());
+        .current_dir(custom_linker_script_dir);
     log::trace!("{:?}", c);
 
     c.status()
