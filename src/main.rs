@@ -110,7 +110,7 @@ fn notmain() -> anyhow::Result<i32> {
     Ok(0)
 }
 
-fn in_tempdir<T>(cb: impl FnOnce(&Path) -> anyhow::Result<T>) -> anyhow::Result<T> {
+fn in_tempdir<T>(callback: impl FnOnce(&Path) -> anyhow::Result<T>) -> anyhow::Result<T> {
     // We avoid the `tempfile` crate because it pulls in quite a few dependencies.
 
     let mut random = [0; 8];
@@ -120,7 +120,7 @@ fn in_tempdir<T>(cb: impl FnOnce(&Path) -> anyhow::Result<T>) -> anyhow::Result<
     path.push(format!("flip-link-{:02x?}", random));
     fs::create_dir(&path)?;
 
-    let res = cb(&path);
+    let res = callback(&path);
 
     // Just in case https://github.com/rust-lang/rust/issues/29497 hits us, we ignore the error from
     // removing the directory and just let it linger until the machine reboots ¯\_(ツ)_/¯.
