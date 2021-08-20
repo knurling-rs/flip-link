@@ -11,18 +11,19 @@ use std::{
     process,
 };
 
-use anyhow::anyhow;
 use object::{elf, Object as _, ObjectSection, SectionFlags};
+
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 const EXIT_CODE_FAILURE: i32 = 1;
 /// Stack Pointer alignment required by the ARM architecture
 const SP_ALIGN: u64 = 8;
 
-fn main() -> anyhow::Result<()> {
+fn main() -> Result<()> {
     notmain().map(|code| process::exit(code))
 }
 
-fn notmain() -> anyhow::Result<i32> {
+fn notmain() -> Result<i32> {
     env_logger::init();
 
     // NOTE `skip` the name/path of the binary (first argument)
@@ -52,7 +53,7 @@ fn notmain() -> anyhow::Result<i32> {
         }
     }
     let (ram_linker_script, ram_entry) = ram_path_entry
-        .ok_or_else(|| anyhow!("MEMORY.RAM not found after scanning linker scripts"))?;
+        .ok_or_else(|| format!("MEMORY.RAM not found after scanning linker scripts"))?;
 
     let output_path = argument_parser::get_output_path(&args)?;
     let elf = &*fs::read(output_path)?;
@@ -110,11 +111,11 @@ fn notmain() -> anyhow::Result<i32> {
     Ok(0)
 }
 
-fn in_tempdir<T>(callback: impl FnOnce(&Path) -> anyhow::Result<T>) -> anyhow::Result<T> {
+fn in_tempdir<T>(callback: impl FnOnce(&Path) -> Result<T>) -> Result<T> {
     // We avoid the `tempfile` crate because it pulls in quite a few dependencies.
 
     let mut random = [0; 8];
-    getrandom::getrandom(&mut random).map_err(|e| anyhow::anyhow!(e))?;
+    getrandom::getrandom(&mut random).map_err(|e| e.to_string())?;
 
     let mut path = std::env::temp_dir();
     path.push(format!("flip-link-{:02x?}", random));
@@ -201,7 +202,7 @@ impl LinkerScript {
     }
 }
 
-fn get_linker_scripts(args: &[String], current_dir: &Path) -> anyhow::Result<Vec<LinkerScript>> {
+fn get_linker_scripts(args: &[String], current_dir: &Path) -> Result<Vec<LinkerScript>> {
     let mut search_paths = argument_parser::get_search_paths(args);
     search_paths.push(current_dir.into());
 

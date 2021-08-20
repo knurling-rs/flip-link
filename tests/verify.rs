@@ -9,10 +9,12 @@ const FILES: [&str; 4] = ["crash", "exception", "hello", "panic"];
 /// Compilation target firmware is build for
 const TARGET: &str = "thumbv7m-none-eabi";
 
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+
 #[rstest]
 #[case::normal(true)]
 #[case::custom_linkerscript(false)]
-fn should_link_example_firmware(#[case] default_features: bool) -> anyhow::Result<()> {
+fn should_link_example_firmware(#[case] default_features: bool) {
     // Arrange
     cargo::check_flip_link();
 
@@ -21,13 +23,10 @@ fn should_link_example_firmware(#[case] default_features: bool) -> anyhow::Resul
 
     // Assert
     cmd.success();
-
-    // ---
-    Ok(())
 }
 
 #[test]
-fn should_verify_memory_layout() -> anyhow::Result<()> {
+fn should_verify_memory_layout() -> Result<()> {
     // Arrange
     cargo::check_flip_link();
 
@@ -93,23 +92,22 @@ mod cargo {
 mod elf {
     use std::{convert::TryInto, ops::RangeInclusive, path::PathBuf};
 
-    use anyhow::anyhow;
     use object::{File, Object, ObjectSection, Section};
 
-    use super::{CRATE, FILES, TARGET};
+    use super::*;
 
     /// Get the initial stack pointer.
     ///
     /// It is the first 32-bit word in the `.vector_table` section,
     /// according to the "ARMv6-M Architecture Reference Manual".
-    pub fn compute_initial_sp(vector_table: &Section) -> anyhow::Result<u64> {
+    pub fn compute_initial_sp(vector_table: &Section) -> Result<u64> {
         let data = vector_table.uncompressed_data()?;
         let sp = u32::from_le_bytes(data[..4].try_into()?);
         Ok(sp as u64)
     }
 
     /// Get [`RangeInclusive`] from lowest to highest address of all sections
-    pub fn get_bounds(sections: &[Section]) -> anyhow::Result<RangeInclusive<u64>> {
+    pub fn get_bounds(sections: &[Section]) -> Result<RangeInclusive<u64>> {
         // get beginning and end of all sections
         let addresses = sections
             .iter()
@@ -117,8 +115,8 @@ mod elf {
             .collect::<Vec<_>>();
 
         // get highest and lowest address of all sections
-        let min = *addresses.iter().min().ok_or(anyhow!("empty iterator"))?;
-        let max = *addresses.iter().max().ok_or(anyhow!("empty iterator"))?;
+        let min = *addresses.iter().min().ok_or(format!("empty iterator"))?;
+        let max = *addresses.iter().max().ok_or(format!("empty iterator"))?;
 
         Ok(min..=max)
     }
@@ -130,7 +128,7 @@ mod elf {
     /// * `.vector_table`
     pub fn get_sections<'data, 'file>(
         object: &'file File<'data>,
-    ) -> anyhow::Result<(
+    ) -> Result<(
         Section<'data, 'file>,
         Section<'data, 'file>,
         Section<'data, 'file>,
@@ -140,7 +138,7 @@ mod elf {
         let get_section = |section_name| {
             object
                 .section_by_name(section_name)
-                .ok_or(anyhow!("error getting section `{}`", section_name))
+                .ok_or(format!("error getting section `{}`", section_name))
         };
 
         Ok((
