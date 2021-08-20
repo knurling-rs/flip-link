@@ -1,4 +1,7 @@
 fn main() -> anyhow::Result<()> {
+    println!("\n🧹 clean up test artifacts from previous run");
+    cargo::clean_test_app()?;
+
     println!("\n⏳ install latest flip-link");
     cargo::install_flip_link()?;
 
@@ -13,6 +16,17 @@ mod cargo {
     use std::process::Command;
 
     use anyhow::anyhow;
+
+    pub fn clean_test_app() -> anyhow::Result<()> {
+        let status = Command::new("cargo")
+            .arg("clean")
+            .current_dir("test-flip-link-app")
+            .status()?;
+        match status.success() {
+            false => Err(anyhow!("cleaning `test-flip-link-app`")),
+            true => Ok(()),
+        }
+    }
 
     /// Install local revision of `flip-link`.
     pub fn install_flip_link() -> anyhow::Result<()> {
