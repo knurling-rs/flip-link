@@ -15,7 +15,7 @@ anyhow = "1.0"
 env_logger = { version = "0.8", default-features = false }
 log = "0.4"
 object = { version = "0.25", default-features = false, features = ["read_core", "elf", "std"] }
-tempfile = "3.2"
+getrandom = "0.2"
 
 [dev-dependencies]
 assert_cmd = "1.0"
