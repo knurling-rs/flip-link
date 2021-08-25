@@ -9,7 +9,7 @@ pub fn get_output_path(args: &[String]) -> crate::Result<&String> {
             }
             None
         })
-        .ok_or_else(|| format!("(BUG?) `-o` flag not found").into())
+        .ok_or_else(|| "(BUG?) `-o` flag not found".to_string().into())
 }
 
 /// Get `search_paths`, specified by `-L`
