@@ -3,12 +3,6 @@
 version = 3
 
 [[package]]
-name = "anyhow"
-version = "1.0.43"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "28ae2b3dec75a406790005a200b1bd89785afc02517a00ca99ecfe093ee9e6cf"
-
-[[package]]
 name = "assert_cmd"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -70,7 +64,6 @@ dependencies = [
 name = "flip-link"
 version = "0.1.4"
 dependencies = [
- "anyhow",
  "assert_cmd",
  "env_logger",
  "getrandom",
@@ -255,6 +248,3 @@ checksum = "fd6fbd9a79829dd1ad0cc20627bf1ed606756a7f77edff7b66b7064f9cb327c6"
 [[package]]
 name = "xtest"
 version = "0.1.0"
-dependencies = [
- "anyhow",
-]

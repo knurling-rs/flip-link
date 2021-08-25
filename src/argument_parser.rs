@@ -1,9 +1,7 @@
 use std::{borrow::Cow, path::PathBuf};
 
-use anyhow::anyhow;
-
 /// Get `output_path`, specified by `-o`
-pub fn get_output_path(args: &[String]) -> anyhow::Result<&String> {
+pub fn get_output_path(args: &[String]) -> crate::Result<&String> {
     args.windows(2)
         .find_map(|x| {
             if x[0] == "-o" {
@@ -11,7 +9,7 @@ pub fn get_output_path(args: &[String]) -> anyhow::Result<&String> {
             }
             None
         })
-        .ok_or_else(|| anyhow!("(BUG?) `-o` flag not found"))
+        .ok_or_else(|| "(BUG?) `-o` flag not found".to_string().into())
 }
 
 /// Get `search_paths`, specified by `-L`

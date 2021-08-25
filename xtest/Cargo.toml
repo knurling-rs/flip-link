@@ -4,7 +4,3 @@ version = "0.1.0"
 authors = ["Johann Hemmann <johann.hemmann@code.berlin>"]
 edition = "2018"
 publish = false
-
-
-[dependencies]
-anyhow = "1.0"
