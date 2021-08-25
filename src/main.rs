@@ -53,7 +53,7 @@ fn notmain() -> Result<i32> {
         }
     }
     let (ram_linker_script, ram_entry) = ram_path_entry
-        .ok_or_else(|| format!("MEMORY.RAM not found after scanning linker scripts"))?;
+        .ok_or_else(|| "MEMORY.RAM not found after scanning linker scripts".to_string())?;
 
     let output_path = argument_parser::get_output_path(&args)?;
     let elf = &*fs::read(output_path)?;
