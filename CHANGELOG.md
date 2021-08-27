@@ -7,15 +7,25 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-- [#]
-- [#49] Fix Clippy warnings r=justahero a=justahero
-- [#46] Link Knurling User Survey in `README` r=BriocheBerlin a=BriocheBerlin
-- [#42] Add tests to check problem with `memory.x` in project root r=japaric a=Urhengulas
-- [#45] `Cargo.toml`: Disable default features of `env_logger` r=Urhengulas a=Urhengulas
-- [#44] Transfer non-static CI steps into `cargo xtest` command r=justahero a=Urhengulas 
-- [#41] Verify initial stack-pointer to be inside static RAM r=japaric a=Urhengulas
-- [#40] Do linking test as part of cargo test; cleanup r=Lotterleben a=Urhengulas
+## [v0.1.5] - 2021-08-27
 
+- [#55] Drop `anyhow`
+- [#54] update & upgrade
+- [#53] `xtest`: Clear `test-flip-link-app`s `target/`-dir before each run
+- [#52] `xtest`: Pass `--force` to `cargo install`
+- [#51] Avoid the `tempfile` dependency
+- [#49] Fix Clippy warnings
+- [#45] `Cargo.toml`: Disable default features of `env_logger`
+- [#44] Transfer non-static CI steps into `cargo xtest` command
+- [#42] Add tests to check problem with `memory.x` in project root
+- [#41] Verify initial stack-pointer to be inside static RAM
+- [#40] Do linking test as part of cargo test; cleanup
+
+[#55]: https://github.com/knurling-rs/flip-link/pull/55
+[#54]: https://github.com/knurling-rs/flip-link/pull/54
+[#53]: https://github.com/knurling-rs/flip-link/pull/53
+[#52]: https://github.com/knurling-rs/flip-link/pull/52
+[#51]: https://github.com/knurling-rs/flip-link/pull/51
 [#49]: https://github.com/knurling-rs/flip-link/pull/49
 [#46]: https://github.com/knurling-rs/flip-link/pull/46
 [#42]: https://github.com/knurling-rs/flip-link/pull/42
@@ -73,7 +83,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Initial release
 
-[Unreleased]: https://github.com/knurling-rs/flip-link/compare/v0.1.4...main
+[Unreleased]: https://github.com/knurling-rs/flip-link/compare/v0.1.5...main
+[v0.1.5]: https://github.com/knurling-rs/flip-link/compare/v0.1.4...v0.1.5
 [v0.1.4]: https://github.com/knurling-rs/flip-link/compare/v0.1.3...v0.1.4
 [v0.1.3]: https://github.com/knurling-rs/flip-link/compare/v0.1.2...v0.1.3
 [v0.1.2]: https://github.com/knurling-rs/flip-link/compare/v0.1.1...v0.1.2
