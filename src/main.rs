@@ -32,6 +32,11 @@ fn notmain() -> Result<i32> {
     {
         let exit_status = linking::link_normally(&args)?;
         if !exit_status.success() {
+            eprintln!();
+            eprintln!(
+                "flip-link: the native linker failed to link the program normally; \
+                 please check your project configuration and linker scripts"
+            );
             return Ok(exit_status.code().unwrap_or(EXIT_CODE_FAILURE));
         }
         // if linking succeeds then linker scripts are well-formed; we'll rely on that in the parser
