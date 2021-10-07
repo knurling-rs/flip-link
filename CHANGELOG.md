@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- [#58] Print a message when linking normally fails
+
+[#58]: https://github.com/knurling-rs/flip-link/pull/58
+
 ## [v0.1.5] - 2021-08-27
 
 - [#55] Drop `anyhow`
