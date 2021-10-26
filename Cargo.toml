@@ -2,7 +2,7 @@
 authors = ["The Knurling-rs developers"]
 categories = ["command-line-utilities", "development-tools", "embedded"]
 description = "Flips the memory layout of embedded programs to protect against stack overflows"
-edition = "2018"
+edition = "2021"
 keywords = ["arm", "cortex-m", "stack-protection"]
 license = "MIT OR Apache-2.0"
 name = "flip-link"
