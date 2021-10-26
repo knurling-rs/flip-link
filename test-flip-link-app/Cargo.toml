@@ -1,6 +1,6 @@
 [package]
 authors = ["Jorge Aparicio <jorge.aparicio@ferrous-systems.com>"]
-edition = "2018"
+edition = "2021"
 readme = "README.md"
 name = "test-flip-link-app"
 version = "0.1.0"
