@@ -208,8 +208,8 @@ impl LinkerScript {
 }
 
 fn get_linker_scripts(args: &[String], current_dir: &Path) -> Result<Vec<LinkerScript>> {
-    let mut search_paths = argument_parser::get_search_paths(args);
-    search_paths.push(current_dir.into());
+    let mut search_paths = vec![current_dir.into()];
+    search_paths.extend(argument_parser::get_search_paths(args));
 
     let mut search_targets = argument_parser::get_search_targets(args);
 
