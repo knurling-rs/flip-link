@@ -33,11 +33,11 @@ jobs:
           toolchain: ${{ matrix.rust }}
           override: true
           target: ${{ env.CORE_TARGET }}
-      # make rustc version to cache key
-      - id: rustc
+      - name: make rustc version available to cache keys
+        id: rustc
         run: echo "::set-output name=version::$(rustc -V)"
-      # cache Cargo registry
-      - uses: actions/cache@v2
+      - name: cache Cargo registry
+        uses: actions/cache@v2
         with:
           path: |
             ~/.cargo/registry/cache
@@ -45,8 +45,8 @@ jobs:
           key: cargo-registry-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             cargo-registry-
-      # cache Cargo build artifacts
-      - uses: actions/cache@v2
+      - name: cache Cargo build artifacts
+        uses: actions/cache@v2
         with:
           path: target
           key: cargo-target-${{ runner.os }}-${{ steps.rustc.outputs.version }}-${{ hashFiles('**/Cargo.lock') }}
