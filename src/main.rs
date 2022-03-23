@@ -325,7 +325,7 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
         for segment in segments {
             let boundary_pos = segment
                 .find(|c| c == 'K' || c == 'M')
-                .unwrap_or_else(|| segment.len());
+                .unwrap_or(segment.len());
             let length: u64 = tryc!(segment[..boundary_pos].parse());
             let raw = &segment[boundary_pos..];
             let mut chars = raw.chars();
