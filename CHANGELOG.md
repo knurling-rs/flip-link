@@ -7,10 +7,24 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-- [#60]: Update to Rust 2021 🎉
-- [#58] Print a message when linking normally fails
+## [v0.1.6] - 2022-03-23
+
+### Fixed
+
+- [#63]: Handles `memory.x` overrides by searching in the current working directory first.
+
+[#63]: https://github.com/knurling-rs/flip-link/pull/63
+
+### Changed
+
+- [#60]: Update to Rust 2021 🎉. Requires Rust 1.56+ to build
 
 [#60]: https://github.com/knurling-rs/flip-link/pull/60
+
+### Added
+
+- [#58] Print a message when linking normally fails. This makes it clearer that the failure is not due to `flip-link`.
+
 [#58]: https://github.com/knurling-rs/flip-link/pull/58
 
 ## [v0.1.5] - 2021-08-27
