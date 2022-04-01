@@ -1,6 +1,6 @@
 mod argument_parser;
 mod linking;
-
+use regex::Regex;
 use std::{
     borrow::Cow,
     env,
@@ -293,8 +293,15 @@ fn get_includes_from_linker_script(linker_script: &str) -> Vec<&str> {
 /// Looks for "RAM : ORIGIN = $origin, LENGTH = $length"
 // FIXME this is a dumb line-by-line parser
 fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
+    let re = Regex::new(r"[^\S]+").unwrap();
+    let linker_script = re.replace_all(linker_script, " ").to_string();
     for (index, mut line) in linker_script.lines().enumerate() {
-
+        if let Some(pos) = line.find("RAM") {
+            line = &line[pos..];
+            println!("PRINTING LINE AFTER TRING to find RAM: {}", line);
+        } else {
+            return None;
+        }
         line = line.trim();
         line = eat!(line, "RAM");
 
@@ -306,18 +313,19 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
         line = eat!(line, ":");
         line = eat!(line, "ORIGIN");
         line = eat!(line, "=");
-        //println!("Printing line: {}", line);
+        println!("Printing line: {}", line);
         let boundary_pos = tryc!(line.find(|c| c == ',').ok_or(()));
-        //println!("Printing line2: {}", &line[..boundary_pos]);
+        println!("Printing line2: {}", &line[..boundary_pos]);
 
         let origin = arithmetic_op(&line[..boundary_pos]);
 
         line = line[boundary_pos..].trim();
-        //println!("Printing line3: {}", line);
+        println!("Printing line3: {}", line);
 
         line = eat!(line, ",");
         line = eat!(line, "LENGTH");
         line = eat!(line, "=");
+        println!("Printing line4: {}", line);
 
         let total_length = arithmetic_op(line);
 
@@ -384,7 +392,7 @@ INCLUDE device.x
         assert_eq!(
             find_ram_in_linker_script(LINKER_SCRIPT),
             Some(MemoryEntry {
-                line: 3,
+                line: 0,
                 origin: 0x20000000,
                 length: 64 * 1024,
             })
@@ -410,7 +418,7 @@ INCLUDE device.x
         assert_eq!(
             find_ram_in_linker_script(LINKER_SCRIPT),
             Some(MemoryEntry {
-                line: 3,
+                line: 0,
                 origin: 0x20000000,
                 length: 64 * 1024,
             })
@@ -436,7 +444,7 @@ INCLUDE device.x
         assert_eq!(
             find_ram_in_linker_script(LINKER_SCRIPT),
             Some(MemoryEntry {
-                line: 3,
+                line: 0,
                 origin: 0x20020000,
                 length: (368 + 16) * 1024,
             })
@@ -462,7 +470,7 @@ INCLUDE device.x
         assert_eq!(
             find_ram_in_linker_script(LINKER_SCRIPT),
             Some(MemoryEntry {
-                line: 3,
+                line: 0,
                 origin: 0x20020000 + (100 * 1024),
                 length: 368 * 1024,
             })
@@ -488,7 +496,7 @@ INCLUDE device.x
         assert_eq!(
             find_ram_in_linker_script(LINKER_SCRIPT),
             Some(MemoryEntry {
-                line: 3,
+                line: 0,
                 origin: 0x20020000 + (100 * 1024 * 1024),
                 length: 368 * 1024,
             })
@@ -514,7 +522,7 @@ INCLUDE device.x
         assert_eq!(
             find_ram_in_linker_script(LINKER_SCRIPT),
             Some(MemoryEntry {
-                line: 4,
+                line: 0,
                 origin: 0x20000000,
                 length: 128 * 1024,
             })
@@ -523,7 +531,7 @@ INCLUDE device.x
 
     #[test]
     fn parse_new_line() {
-        const LINKER_SCRIPT: &str =  "MEMORY
+        const LINKER_SCRIPT: &str = "MEMORY
 {
     FLASH : ORIGIN = 0x08000000, LENGTH = 2M
     RAM : ORIGIN = 0x20000000, 
@@ -533,7 +541,7 @@ INCLUDE device.x
         assert_eq!(
             find_ram_in_linker_script(LINKER_SCRIPT),
             Some(MemoryEntry {
-                line: 3,
+                line: 0,
                 origin: 0x20000000,
                 length: 256 * 1024,
             })
@@ -542,7 +550,7 @@ INCLUDE device.x
 
     #[test]
     fn parse_new_lines() {
-        const LINKER_SCRIPT: &str =  "MEMORY
+        const LINKER_SCRIPT: &str = "MEMORY
 {
   RAM
   :
@@ -558,7 +566,7 @@ LENGTH
         assert_eq!(
             find_ram_in_linker_script(LINKER_SCRIPT),
             Some(MemoryEntry {
-                line: 6,
+                line: 0,
                 origin: 0x20000000,
                 length: 256 * 1024,
             })
@@ -568,7 +576,7 @@ LENGTH
     #[test]
     fn parse_same_line() {
         const LINKER_SCRIPT: &str =  "MEMORY { FLASH : ORIGIN = 0x00000000, LENGTH = 1024K RAM : ORIGIN = 0x20000000, LENGTH = 256K }";
-        
+
         assert_eq!(
             find_ram_in_linker_script(LINKER_SCRIPT),
             Some(MemoryEntry {
@@ -581,18 +589,18 @@ LENGTH
 
     #[test]
     fn parse_section() {
-        const LINKER_SCRIPT: &str =  "MEMORY 
+        const LINKER_SCRIPT: &str = "MEMORY 
 {
     FLASH : ORIGIN = 0x00000000, LENGTH = 1024K
     RAM : ORIGIN = 0x20000000, LENGTH = 256K
 };
           
 SECTIONS {};";
-        
+
         assert_eq!(
             find_ram_in_linker_script(LINKER_SCRIPT),
             Some(MemoryEntry {
-                line: 3,
+                line: 0,
                 origin: 0x20000000,
                 length: 256 * 1024,
             })
@@ -601,44 +609,41 @@ SECTIONS {};";
 
     #[test]
     fn parse_memory_replicate() {
-        const LINKER_SCRIPT: &str =  "
+        const LINKER_SCRIPT: &str = "
 MEMORY { FLASH : ORIGIN = 0x00000000, LENGTH = 1024K }
 MEMORY { RAM : ORIGIN = 0x20000000, LENGTH = 256K }";
         assert_eq!(
             find_ram_in_linker_script(LINKER_SCRIPT),
             Some(MemoryEntry {
-                line: 2,
+                line: 0,
                 origin: 0x20000000,
                 length: 256 * 1024,
             })
         );
     }
 
-
-
-      #[test]
-      fn parse_sections_replicate() {
-          const LINKER_SCRIPT: &str =  "MEMORY 
+    #[test]
+    fn parse_sections_replicate() {
+        const LINKER_SCRIPT: &str = "MEMORY 
 {
     FLASH : ORIGIN = 0x08000000, LENGTH = 2M
     RAM : ORIGIN = 0x20020000, LENGTH = 368K
 }
 SECTIONS {}
 SECTIONS {}";
-          assert_eq!(
-              find_ram_in_linker_script(LINKER_SCRIPT),
-              Some(MemoryEntry {
-                  line: 3,
-                  origin: 0x20000000,
-                  length: 256 * 1024,
-              })
-          );
-      }
+        assert_eq!(
+            find_ram_in_linker_script(LINKER_SCRIPT),
+            Some(MemoryEntry {
+                line: 0,
+                origin: 0x20000000,
+                length: 256 * 1024,
+            })
+        );
+    }
 
-
-      #[test]
-      fn parse_sections_include_memory() {
-          const LINKER_SCRIPT: &str =  "MEMORY 
+    #[test]
+    fn parse_sections_include_memory() {
+        const LINKER_SCRIPT: &str = "MEMORY 
 {
     FLASH : ORIGIN = 0x08000000, LENGTH = 2M
     RAM : ORIGIN = 0x20020000, LENGTH = 368K
@@ -647,37 +652,25 @@ SECTIONS {}";
 SECTIONS {
 MEMORY : {}
 }";
-          assert_eq!(
-              find_ram_in_linker_script(LINKER_SCRIPT),
-              Some(MemoryEntry {
-                  line: 3,
-                  origin: 0x20000000,
-                  length: 368 * 1024,
-              })
-          );
-      }
+        assert_eq!(
+            find_ram_in_linker_script(LINKER_SCRIPT),
+            Some(MemoryEntry {
+                line: 0,
+                origin: 0x20000000,
+                length: 368 * 1024,
+            })
+        );
+    }
 
-
-      #[test]
-      fn parse_comment() {
-          const LINKER_SCRIPT: &str =  "/*
+    #[test]
+    fn parse_comment() {
+        const LINKER_SCRIPT: &str = "/*
 MEMORY 
 {
     RAM (rw) : ORIGIN = 0x20020000, LENGTH = 368K
 }
 */
 ";
-          assert_eq!(
-              find_ram_in_linker_script(LINKER_SCRIPT), None);
-      }
-
-
-
-
-
-
-
-
-
-
+        assert_eq!(find_ram_in_linker_script(LINKER_SCRIPT), None);
+    }
 }
