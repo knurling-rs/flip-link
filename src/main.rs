@@ -303,17 +303,12 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
     for (index, mut line) in linker_script.lines().enumerate() {
         if let Some(pos) = line.find("RAM") {
             line = &line[pos..];
-            println!("PRINTING LINE AFTER TRING to find RAM: {}", line);
         } else {
             return None;
         }
 
         if let Some(pos) = line.find(" }") {
             line = &line[..pos];
-            println!(
-                "PRINTING LINE AFTER TRIMMING AWAY INCLUDE device.x: {}",
-                line
-            );
         } else {
             return None;
         }
@@ -328,19 +323,15 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
         line = eat!(line, ":");
         line = eat!(line, "ORIGIN");
         line = eat!(line, "=");
-        println!("Printing line: {}", line);
         let boundary_pos = tryc!(line.find(|c| c == ',').ok_or(()));
-        println!("Printing line2: {}", &line[..boundary_pos]);
 
         let origin = arithmetic_op(&line[..boundary_pos]);
 
         line = line[boundary_pos..].trim();
-        println!("Printing line3: {}", line);
 
         line = eat!(line, ",");
         line = eat!(line, "LENGTH");
         line = eat!(line, "=");
-        println!("Printing line4: {}", line);
 
         let total_length = arithmetic_op(line);
 
@@ -360,21 +351,17 @@ fn arithmetic_op(line: &str) -> u64 {
 
     let mut total_length = 0;
     for segment in segments {
-        println!("current segment {}", segment);
         let boundary_pos = segment
             .find(|c| c == 'K' || c == 'M')
             .unwrap_or(segment.len());
-        println!("boundary pos {}", boundary_pos);
         const HEX: &str = "0x";
         let length: u64 = if segment.starts_with(HEX) {
             tryc!(u64::from_str_radix(&segment[HEX.len()..boundary_pos], 16))
         } else {
             tryc!(segment[..boundary_pos].parse())
         };
-        println!("hex length {}", length);
 
         let raw = &segment[boundary_pos..];
-        println!("rest of the segment {}", &segment[boundary_pos..]);
         let mut chars = raw.chars();
         let unit = chars.next();
         if unit == Some('K') {
@@ -385,7 +372,6 @@ fn arithmetic_op(line: &str) -> u64 {
             total_length += length;
         }
     }
-    println!("total length : {}", total_length);
     total_length
 }
 
