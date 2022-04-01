@@ -293,8 +293,13 @@ fn get_includes_from_linker_script(linker_script: &str) -> Vec<&str> {
 /// Looks for "RAM : ORIGIN = $origin, LENGTH = $length"
 // FIXME this is a dumb line-by-line parser
 fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
+    // Removing all white spaces of the file and replacing with a space
     let re = Regex::new(r"[^\S]+").unwrap();
-    let linker_script = re.replace_all(linker_script, " ").to_string();
+    let linker_script = &re.replace_all(linker_script, " ").to_string();
+    // Removing all comments
+    let re2 = Regex::new(r"/\*(.|\n)*?\*/").unwrap();
+    let linker_script = re2.replace_all(linker_script, "").to_string();
+    
     for (index, mut line) in linker_script.lines().enumerate() {
         if let Some(pos) = line.find("RAM") {
             line = &line[pos..];
@@ -672,8 +677,8 @@ SECTIONS {}";
             find_ram_in_linker_script(LINKER_SCRIPT),
             Some(MemoryEntry {
                 line: 0,
-                origin: 0x20000000,
-                length: 256 * 1024,
+                origin: 0x20020000,
+                length: 368 * 1024,
             })
         );
     }
