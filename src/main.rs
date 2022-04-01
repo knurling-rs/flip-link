@@ -302,6 +302,16 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
         } else {
             return None;
         }
+
+        if let Some(pos) = line.find(" }") {
+            line = &line[..pos];
+            println!(
+                "PRINTING LINE AFTER TRIMMING AWAY INCLUDE device.x: {}",
+                line
+            );
+        } else {
+            return None;
+        }
         line = line.trim();
         line = eat!(line, "RAM");
 
@@ -403,6 +413,33 @@ INCLUDE device.x
             vec!["device.x"]
         );
     }
+
+    // Should return error?
+    //     #[test]
+    //     fn parse_unauthorized_units() {
+    //         const LINKER_SCRIPT: &str = "MEMORY
+    // {
+    //   FLASH : ORIGIN = 0x00000000, LENGTH = 256P
+    //   RAM : ORIGIN = 0x20000000, LENGTH = 64P
+    // }
+
+    // INCLUDE device.x
+    // ";
+
+    //         assert_eq!(
+    //             find_ram_in_linker_script(LINKER_SCRIPT),
+    //             Some(MemoryEntry {
+    //                 line: 0,
+    //                 origin: 0x20000000,
+    //                 length: 64 * 1024,
+    //             })
+    //         );
+
+    //         assert_eq!(
+    //             get_includes_from_linker_script(LINKER_SCRIPT),
+    //             vec!["device.x"]
+    //         );
+    //     }
 
     #[test]
     fn parse_no_units() {
@@ -656,7 +693,7 @@ MEMORY : {}
             find_ram_in_linker_script(LINKER_SCRIPT),
             Some(MemoryEntry {
                 line: 0,
-                origin: 0x20000000,
+                origin: 0x20020000,
                 length: 368 * 1024,
             })
         );
@@ -673,4 +710,16 @@ MEMORY
 ";
         assert_eq!(find_ram_in_linker_script(LINKER_SCRIPT), None);
     }
+}
+
+#[test]
+fn parse_empty() {
+    const LINKER_SCRIPT: &str = "
+MEMORY {}
+
+SECTIONS {
+MEMORY : {}
+}
+";
+    assert_eq!(find_ram_in_linker_script(LINKER_SCRIPT), None);
 }
