@@ -1,6 +1,6 @@
 mod argument_parser;
 mod linking;
-
+use regex::Regex;
 use std::{
     borrow::Cow,
     env,
@@ -293,10 +293,14 @@ fn get_includes_from_linker_script(linker_script: &str) -> Vec<&str> {
 /// Looks for "RAM : ORIGIN = $origin, LENGTH = $length"
 // FIXME this is a dumb line-by-line parser
 fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
-    for (index, mut line) in linker_script.lines().enumerate() {
+    let re = Regex::new(r"[^\S]+").unwrap();
+    let ls_2 = re.replace_all(linker_script, " ").to_string();
+    println!("PRINTING LINKER SCRIPT AFTER REGEX: {}", ls_2);
+    for (index, mut line) in ls_2.lines().enumerate() {
+        println!("PRINTING LINE AFTER REGEX: {}", line);
         line = line.trim();
         line = eat!(line, "RAM");
-
+        println!("PRINTING LINE AFTER EAT RAM: {}", line);
         // jump over attributes like (xrw) see parse_attributes()
         if let Some(i) = line.find(':') {
             line = line[i..].trim();
@@ -392,6 +396,19 @@ INCLUDE device.x
         assert_eq!(
             get_includes_from_linker_script(LINKER_SCRIPT),
             vec!["device.x"]
+        );
+    }
+    #[test]
+    fn parse_one_line() {
+        const LINKER_SCRIPT: &str = "MEMORY { FLASH : ORIGIN = 0x00000000, LENGTH = 1024K RAM : ORIGIN = 0x20000000, LENGTH = 256K }";
+
+        assert_eq!(
+            find_ram_in_linker_script(LINKER_SCRIPT),
+            Some(MemoryEntry {
+                line: 0,
+                origin: 0x20000000,
+                length: 256 * 1024,
+            })
         );
     }
 
