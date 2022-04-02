@@ -293,8 +293,7 @@ fn get_includes_from_linker_script(linker_script: &str) -> Vec<&str> {
 /// Looks for "RAM : ORIGIN = $origin, LENGTH = $length"
 // FIXME this is a dumb line-by-line parser
 fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
-    
-    let mut index_line :usize = 0;
+    let mut index_line: usize = 0;
     for (i, mut line) in linker_script.lines().enumerate() {
         if let Some(_pos) = line.find("RAM") {
             index_line = i;
@@ -307,7 +306,7 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
     // Removing all comments
     let re2 = Regex::new(r"/\*(.|\n)*?\*/").unwrap();
     let linker_script2 = re2.replace_all(linker_script2, "").to_string();
-    
+
     for (_index, mut line) in linker_script2.lines().enumerate() {
         if let Some(pos) = line.find("RAM") {
             line = &line[pos..];
@@ -579,31 +578,31 @@ INCLUDE device.x
         );
     }
 
-//     // Should accept
-//     #[test]
-//     fn parse_new_lines() {
-//         const LINKER_SCRIPT: &str = "MEMORY
-// {
-//   RAM
-//   :
-//   ORIGIN
-//   =
-//   0x20000000
-//   ,
-// LENGTH
-// =
-// 256K
-// }
-// ";
-//         assert_eq!(
-//             find_ram_in_linker_script(LINKER_SCRIPT),
-//             Some(MemoryEntry {
-//                 line: 0,
-//                 origin: 0x20000000,
-//                 length: 256 * 1024,
-//             })
-//         );
-//     }
+    // Should accept
+    #[test]
+    fn parse_new_lines() {
+        const LINKER_SCRIPT: &str = "MEMORY
+{
+  RAM
+  :
+  ORIGIN
+  =
+  0x20000000
+  ,
+LENGTH
+=
+256K
+}
+";
+        assert_eq!(
+            find_ram_in_linker_script(LINKER_SCRIPT),
+            Some(MemoryEntry {
+                line: 2,
+                origin: 0x20000000,
+                length: 256 * 1024,
+            })
+        );
+    }
 
     // Should accept
     #[test]
