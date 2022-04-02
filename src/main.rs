@@ -492,6 +492,7 @@ INCLUDE device.x
         );
     }
 
+    //
     #[test]
     fn parse_plus_origin_k() {
         const LINKER_SCRIPT: &str = "MEMORY
@@ -499,8 +500,6 @@ INCLUDE device.x
   FLASH : ORIGIN = 0x08000000, LENGTH = 2M
   RAM : ORIGIN = 0x20020000 + 100K, LENGTH = 368K
 }
-
-INCLUDE device.x
 ";
 
         assert_eq!(
@@ -510,11 +509,6 @@ INCLUDE device.x
                 origin: 0x20020000 + (100 * 1024),
                 length: 368 * 1024,
             })
-        );
-
-        assert_eq!(
-            get_includes_from_linker_script(LINKER_SCRIPT),
-            vec!["device.x"]
         );
     }
 
@@ -565,6 +559,7 @@ INCLUDE device.x
         );
     }
 
+    // should accept
     #[test]
     fn parse_new_line() {
         const LINKER_SCRIPT: &str = "MEMORY
@@ -584,6 +579,7 @@ INCLUDE device.x
         );
     }
 
+//     // Should accept
 //     #[test]
 //     fn parse_new_lines() {
 //         const LINKER_SCRIPT: &str = "MEMORY
@@ -609,6 +605,7 @@ INCLUDE device.x
 //         );
 //     }
 
+    // Should accept
     #[test]
     fn parse_same_line() {
         const LINKER_SCRIPT: &str =  "MEMORY { FLASH : ORIGIN = 0x00000000, LENGTH = 1024K RAM : ORIGIN = 0x20000000, LENGTH = 256K }";
@@ -623,6 +620,7 @@ INCLUDE device.x
         );
     }
 
+    // Should accept
     #[test]
     fn parse_section() {
         const LINKER_SCRIPT: &str = "MEMORY 
@@ -643,6 +641,7 @@ SECTIONS {};";
         );
     }
 
+    // Should accept
     #[test]
     fn parse_memory_replicate() {
         const LINKER_SCRIPT: &str = "
@@ -658,6 +657,7 @@ MEMORY { RAM : ORIGIN = 0x20000000, LENGTH = 256K }";
         );
     }
 
+    // Should accept
     #[test]
     fn parse_sections_replicate() {
         const LINKER_SCRIPT: &str = "MEMORY 
@@ -677,6 +677,7 @@ SECTIONS {}";
         );
     }
 
+    // Should accept
     #[test]
     fn parse_sections_include_memory() {
         const LINKER_SCRIPT: &str = "MEMORY 
@@ -698,6 +699,7 @@ MEMORY : {}
         );
     }
 
+    // Should accept
     #[test]
     fn parse_comment() {
         const LINKER_SCRIPT: &str = "/*
@@ -710,6 +712,8 @@ MEMORY
         assert_eq!(find_ram_in_linker_script(LINKER_SCRIPT), None);
     }
 }
+
+// Should accept
 
 #[test]
 fn parse_empty() {
