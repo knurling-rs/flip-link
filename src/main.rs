@@ -294,7 +294,7 @@ fn get_includes_from_linker_script(linker_script: &str) -> Vec<&str> {
 // FIXME this is a dumb line-by-line parser
 fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
     let mut index_line: usize = 0;
-    for (i, mut line) in linker_script.lines().enumerate() {
+    for (i, line) in linker_script.lines().enumerate() {
         if let Some(_pos) = line.find("RAM") {
             index_line = i;
         }
@@ -302,12 +302,12 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
 
     // Removing all white spaces of the file and replacing with a space
     let re = Regex::new(r"[^\S]+").unwrap();
-    let linker_script2 = &re.replace_all(linker_script, " ").to_string();
+    let linker_script = &re.replace_all(linker_script, " ").to_string();
     // Removing all comments
     let re2 = Regex::new(r"/\*(.|\n)*?\*/").unwrap();
-    let linker_script2 = re2.replace_all(linker_script2, "").to_string();
+    let linker_script = re2.replace_all(linker_script, "").to_string();
 
-    for (_index, mut line) in linker_script2.lines().enumerate() {
+    for (_index, mut line) in linker_script.lines().enumerate() {
         if let Some(pos) = line.find("RAM") {
             line = &line[pos..];
         } else {
@@ -420,10 +420,6 @@ INCLUDE device.x
     //   FLASH : ORIGIN = 0x00000000, LENGTH = 256P
     //   RAM : ORIGIN = 0x20000000, LENGTH = 64P
     // }
-
-    // INCLUDE device.x
-    // ";
-
     //         assert_eq!(
     //             find_ram_in_linker_script(LINKER_SCRIPT),
     //             Some(MemoryEntry {
@@ -432,12 +428,6 @@ INCLUDE device.x
     //                 length: 64 * 1024,
     //             })
     //         );
-
-    //         assert_eq!(
-    //             get_includes_from_linker_script(LINKER_SCRIPT),
-    //             vec!["device.x"]
-    //         );
-    //     }
 
     #[test]
     fn parse_no_units() {
@@ -558,7 +548,7 @@ INCLUDE device.x
         );
     }
 
-    // should accept
+    // Flip link should accept. Accepted by rust lld
     #[test]
     fn parse_new_line() {
         const LINKER_SCRIPT: &str = "MEMORY
@@ -578,7 +568,7 @@ INCLUDE device.x
         );
     }
 
-    // Should accept
+    // Flip link should accept. Accepted by rust lld
     #[test]
     fn parse_new_lines() {
         const LINKER_SCRIPT: &str = "MEMORY
@@ -604,7 +594,7 @@ LENGTH
         );
     }
 
-    // Should accept
+    // Flip link should accept. Accepted by rust lld
     #[test]
     fn parse_same_line() {
         const LINKER_SCRIPT: &str =  "MEMORY { FLASH : ORIGIN = 0x00000000, LENGTH = 1024K RAM : ORIGIN = 0x20000000, LENGTH = 256K }";
@@ -619,7 +609,7 @@ LENGTH
         );
     }
 
-    // Should accept
+    // Flip link should accept. Accepted by rust lld
     #[test]
     fn parse_section() {
         const LINKER_SCRIPT: &str = "MEMORY 
@@ -640,7 +630,7 @@ SECTIONS {};";
         );
     }
 
-    // Should accept
+    // Flip link should accept. Accepted by rust lld
     #[test]
     fn parse_memory_replicate() {
         const LINKER_SCRIPT: &str = "
@@ -656,7 +646,7 @@ MEMORY { RAM : ORIGIN = 0x20000000, LENGTH = 256K }";
         );
     }
 
-    // Should accept
+    // Flip link should accept. Accepted by rust lld
     #[test]
     fn parse_sections_replicate() {
         const LINKER_SCRIPT: &str = "MEMORY 
@@ -676,7 +666,7 @@ SECTIONS {}";
         );
     }
 
-    // Should accept
+    // Flip link should accept. Accepted by rust lld
     #[test]
     fn parse_sections_include_memory() {
         const LINKER_SCRIPT: &str = "MEMORY 
@@ -698,7 +688,7 @@ MEMORY : {}
         );
     }
 
-    // Should accept
+    // Flip link should accept. Accepted by rust lld
     #[test]
     fn parse_comment() {
         const LINKER_SCRIPT: &str = "/*
@@ -712,7 +702,7 @@ MEMORY
     }
 }
 
-// Should accept
+// Flip link should accept. Accepted by rust lld
 
 #[test]
 fn parse_empty() {
