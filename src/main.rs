@@ -344,7 +344,7 @@ fn perform_addition(line: &str) -> u64 {
             tryc!(u64::from_str_radix(&segment[HEX.len()..boundary_pos], 16))
         } else {
             tryc!(segment[..boundary_pos].parse())
-        }; // if some numbers are hex we convert here
+        };
 
         let raw = &segment[boundary_pos..];
         let mut chars = raw.chars();
