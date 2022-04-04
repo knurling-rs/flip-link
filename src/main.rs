@@ -269,6 +269,8 @@ macro_rules! eat {
         }
     };
 }
+
+/// This macro search `token` in a line and returns it, or , else `continue` loop iteration.
 macro_rules! tryc {
     ($expr:expr) => {
         if let Ok(x) = $expr {
@@ -305,20 +307,17 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
         line = eat!(line, ":");
         line = eat!(line, "ORIGIN");
         line = eat!(line, "=");
-        println!("Printing line: {}", line);
         let boundary_pos = tryc!(line.find(|c| c == ',').ok_or(()));
-        println!("Printing line2: {}", &line[..boundary_pos]);
 
-        let origin = arithmetic_op(&line[..boundary_pos]);
+        let origin = perform_addition(&line[..boundary_pos]);
 
         line = line[boundary_pos..].trim();
-        println!("Printing line3: {}", line);
 
         line = eat!(line, ",");
         line = eat!(line, "LENGTH");
         line = eat!(line, "=");
 
-        let total_length = arithmetic_op(line);
+        let total_length = perform_addition(line);
 
         return Some(MemoryEntry {
             line: index,
@@ -330,27 +329,24 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
     None
 }
 
-fn arithmetic_op(line: &str) -> u64 {
+/// Perform addition when ORIGN or LENGTH variables contain an addition
+fn perform_addition(line: &str) -> u64 {
     let segments: Vec<&str> = line.split('+').map(|s| s.trim().trim_end()).collect();
-    // if some numbers are hex we convert here
 
     let mut total_length = 0;
     for segment in segments {
-        println!("current segment {}", segment);
         let boundary_pos = segment
             .find(|c| c == 'K' || c == 'M')
             .unwrap_or(segment.len());
-        println!("boundary pos {}", boundary_pos);
         const HEX: &str = "0x";
+        // Special case parsing for hex numbers.
         let length: u64 = if segment.starts_with(HEX) {
             tryc!(u64::from_str_radix(&segment[HEX.len()..boundary_pos], 16))
         } else {
             tryc!(segment[..boundary_pos].parse())
-        };
-        println!("hex length {}", length);
+        }; // if some numbers are hex we convert here
 
         let raw = &segment[boundary_pos..];
-        println!("rest of the segment {}", &segment[boundary_pos..]);
         let mut chars = raw.chars();
         let unit = chars.next();
         if unit == Some('K') {
@@ -361,7 +357,6 @@ fn arithmetic_op(line: &str) -> u64 {
             total_length += length;
         }
     }
-    println!("total length : {}", total_length);
     total_length
 }
 
@@ -463,6 +458,32 @@ INCLUDE device.x
             Some(MemoryEntry {
                 line: 3,
                 origin: 0x20020000 + (100 * 1024),
+                length: 368 * 1024,
+            })
+        );
+
+        assert_eq!(
+            get_includes_from_linker_script(LINKER_SCRIPT),
+            vec!["device.x"]
+        );
+    }
+
+    #[test]
+    fn parse_plus_origin_no_units() {
+        const LINKER_SCRIPT: &str = "MEMORY
+{
+  FLASH : ORIGIN = 0x08000000, LENGTH = 2M
+  RAM : ORIGIN = 0x20020000 + 1000, LENGTH = 368K
+}
+
+INCLUDE device.x
+";
+
+        assert_eq!(
+            find_ram_in_linker_script(LINKER_SCRIPT),
+            Some(MemoryEntry {
+                line: 3,
+                origin: 0x20020000 + 1000,
                 length: 368 * 1024,
             })
         );
