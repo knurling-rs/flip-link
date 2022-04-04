@@ -270,7 +270,7 @@ macro_rules! eat {
     };
 }
 
-/// This macro takes any expression which evaluates to a Result, returns the Ok value, or continues in case of an Err.
+/// This macro takes any expression which evaluates to a `Result`, returns the `Ok` value, or continues in case of an `Err`.
 macro_rules! tryc {
     ($expr:expr) => {
         if let Ok(x) = $expr {
