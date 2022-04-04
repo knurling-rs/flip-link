@@ -270,6 +270,17 @@ macro_rules! eat {
     };
 }
 
+/// This macro takes any expression which evaluates to a `Result`, returns the `Ok` value, or continues in case of an `Err`.
+macro_rules! tryc {
+    ($expr:expr) => {
+        if let Ok(x) = $expr {
+            x
+        } else {
+            continue;
+        }
+    };
+}
+
 fn get_includes_from_linker_script(linker_script: &str) -> Vec<&str> {
     let mut includes = vec![];
     for mut line in linker_script.lines() {
@@ -284,16 +295,6 @@ fn get_includes_from_linker_script(linker_script: &str) -> Vec<&str> {
 /// Looks for "RAM : ORIGIN = $origin, LENGTH = $length"
 // FIXME this is a dumb line-by-line parser
 fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
-    macro_rules! tryc {
-        ($expr:expr) => {
-            if let Ok(x) = $expr {
-                x
-            } else {
-                continue;
-            }
-        };
-    }
-
     for (index, mut line) in linker_script.lines().enumerate() {
         line = line.trim();
         line = eat!(line, "RAM");
@@ -306,38 +307,18 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
         line = eat!(line, ":");
         line = eat!(line, "ORIGIN");
         line = eat!(line, "=");
+        let boundary_pos = tryc!(line.find(|c| c == ',').ok_or(()));
 
-        let boundary_pos = tryc!(line.find(|c| c == ',' || c == ' ').ok_or(()));
-        const HEX: &str = "0x";
-        let origin = if line.starts_with(HEX) {
-            tryc!(u64::from_str_radix(&line[HEX.len()..boundary_pos], 16))
-        } else {
-            tryc!(line[..boundary_pos].parse())
-        };
+        let origin = perform_addition(&line[..boundary_pos]);
+
         line = line[boundary_pos..].trim();
 
         line = eat!(line, ",");
         line = eat!(line, "LENGTH");
         line = eat!(line, "=");
 
-        let segments: Vec<&str> = line.split('+').map(|s| s.trim().trim_end()).collect();
-        let mut total_length = 0;
-        for segment in segments {
-            let boundary_pos = segment
-                .find(|c| c == 'K' || c == 'M')
-                .unwrap_or(segment.len());
-            let length: u64 = tryc!(segment[..boundary_pos].parse());
-            let raw = &segment[boundary_pos..];
-            let mut chars = raw.chars();
-            let unit = chars.next();
-            if unit == Some('K') {
-                total_length += length * 1024;
-            } else if unit == Some('M') {
-                total_length += length * 1024 * 1024;
-            } else if unit == None {
-                total_length += length;
-            }
-        }
+        let total_length = perform_addition(line);
+
         return Some(MemoryEntry {
             line: index,
             origin,
@@ -346,6 +327,38 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
     }
 
     None
+}
+
+/// Perform addition when ORIGN or LENGTH variables contain an addition.
+/// If there is no addition to be performed, it will return the `u64` value.
+fn perform_addition(line: &str) -> u64 {
+    let segments: Vec<&str> = line.split('+').map(|s| s.trim().trim_end()).collect();
+
+    let mut total_length = 0;
+    for segment in segments {
+        let boundary_pos = segment
+            .find(|c| c == 'K' || c == 'M')
+            .unwrap_or(segment.len());
+        const HEX: &str = "0x";
+        // Special case parsing for hex numbers.
+        let length: u64 = if segment.starts_with(HEX) {
+            tryc!(u64::from_str_radix(&segment[HEX.len()..boundary_pos], 16))
+        } else {
+            tryc!(segment[..boundary_pos].parse())
+        };
+
+        let raw = &segment[boundary_pos..];
+        let mut chars = raw.chars();
+        let unit = chars.next();
+        if unit == Some('K') {
+            total_length += length * 1024;
+        } else if unit == Some('M') {
+            total_length += length * 1024 * 1024;
+        } else if unit == None {
+            total_length += length;
+        }
+    }
+    total_length
 }
 
 #[cfg(test)]
@@ -405,6 +418,22 @@ INCLUDE device.x
     }
 
     #[test]
+    fn test_perform_addition_hex_and_number() {
+        const ADDITION: &str = "0x20000000 + 1000";
+        let expected: u64 = 0x20000000 + 1000;
+
+        assert_eq!(perform_addition(ADDITION), expected);
+    }
+
+    #[test]
+    fn test_perform_addition_returns_number() {
+        const NO_ADDITION: &str = "0x20000000";
+        let expected: u64 = 536870912; //0x20000000 base 10
+
+        assert_eq!(perform_addition(NO_ADDITION), expected);
+    }
+
+    #[test]
     fn parse_plus() {
         const LINKER_SCRIPT: &str = "MEMORY
 {
@@ -421,6 +450,84 @@ INCLUDE device.x
                 line: 3,
                 origin: 0x20020000,
                 length: (368 + 16) * 1024,
+            })
+        );
+
+        assert_eq!(
+            get_includes_from_linker_script(LINKER_SCRIPT),
+            vec!["device.x"]
+        );
+    }
+
+    #[test]
+    fn parse_plus_origin_k() {
+        const LINKER_SCRIPT: &str = "MEMORY
+{
+  FLASH : ORIGIN = 0x08000000, LENGTH = 2M
+  RAM : ORIGIN = 0x20020000 + 100K, LENGTH = 368K
+}
+
+INCLUDE device.x
+";
+
+        assert_eq!(
+            find_ram_in_linker_script(LINKER_SCRIPT),
+            Some(MemoryEntry {
+                line: 3,
+                origin: 0x20020000 + (100 * 1024),
+                length: 368 * 1024,
+            })
+        );
+
+        assert_eq!(
+            get_includes_from_linker_script(LINKER_SCRIPT),
+            vec!["device.x"]
+        );
+    }
+
+    #[test]
+    fn parse_plus_origin_no_units() {
+        const LINKER_SCRIPT: &str = "MEMORY
+{
+  FLASH : ORIGIN = 0x08000000, LENGTH = 2M
+  RAM : ORIGIN = 0x20020000 + 1000, LENGTH = 368K
+}
+
+INCLUDE device.x
+";
+
+        assert_eq!(
+            find_ram_in_linker_script(LINKER_SCRIPT),
+            Some(MemoryEntry {
+                line: 3,
+                origin: 0x20020000 + 1000,
+                length: 368 * 1024,
+            })
+        );
+
+        assert_eq!(
+            get_includes_from_linker_script(LINKER_SCRIPT),
+            vec!["device.x"]
+        );
+    }
+
+    #[test]
+    fn parse_plus_origin_m() {
+        const LINKER_SCRIPT: &str = "MEMORY
+{
+  FLASH : ORIGIN = 0x08000000, LENGTH = 2M
+  RAM : ORIGIN = 0x20020000 + 100M, LENGTH = 368K
+}
+
+INCLUDE device.x
+";
+
+        assert_eq!(
+            find_ram_in_linker_script(LINKER_SCRIPT),
+            Some(MemoryEntry {
+                line: 3,
+                origin: 0x20020000 + (100 * 1024 * 1024),
+                length: 368 * 1024,
             })
         );
 
