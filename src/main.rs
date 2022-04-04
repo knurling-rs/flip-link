@@ -418,6 +418,22 @@ INCLUDE device.x
     }
 
     #[test]
+    fn test_perform_addition_hex_and_number() {
+        const ADDITION: &str = "0x20000000 + 1000";
+        let expected: u64 = 0x20000000 + 1000;
+
+        assert_eq!(perform_addition(ADDITION), expected);
+    }
+
+    #[test]
+    fn test_perform_addition_returns_number() {
+        const NO_ADDITION: &str = "0x20000000";
+        let expected: u64 = 536870912; //0x20000000 base 10
+
+        assert_eq!(perform_addition(NO_ADDITION), expected);
+    }
+
+    #[test]
     fn parse_plus() {
         const LINKER_SCRIPT: &str = "MEMORY
 {
