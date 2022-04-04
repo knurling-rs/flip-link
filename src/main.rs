@@ -270,7 +270,7 @@ macro_rules! eat {
     };
 }
 
-/// This macro search `token` in a line and returns it, or , else `continue` loop iteration.
+/// This macro takes any expression which evaluates to a Result, returns the Ok value, or continues in case of an Err.
 macro_rules! tryc {
     ($expr:expr) => {
         if let Ok(x) = $expr {
@@ -329,7 +329,8 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
     None
 }
 
-/// Perform addition when ORIGN or LENGTH variables contain an addition
+/// Perform addition when ORIGN or LENGTH variables contain an addition.
+/// If there is no addition to be performed, it will return the `u64` value.
 fn perform_addition(line: &str) -> u64 {
     let segments: Vec<&str> = line.split('+').map(|s| s.trim().trim_end()).collect();
 
