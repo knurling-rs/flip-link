@@ -1,11 +1,11 @@
 mod argument_parser;
 mod linking;
-use regex::Regex;
+
 use std::{
     borrow::Cow,
     env,
     fs::{self, File},
-    io::{BufRead, Write},
+    io::Write,
     ops::RangeInclusive,
     path::{Path, PathBuf},
     process,
@@ -56,7 +56,7 @@ fn notmain() -> Result<i32> {
         let script_contents = fs::read_to_string(linker_script.path())?;
 
         let mut parser = Parser {
-            line: &script_contents,
+            script: &script_contents,
             position: 0,
             ram_line: 0,
         };
@@ -276,15 +276,6 @@ macro_rules! eat {
         }
     };
 }
-macro_rules! tryc {
-    ($expr:expr) => {
-        if let Ok(x) = $expr {
-            x
-        } else {
-            continue;
-        }
-    };
-}
 
 fn get_includes_from_linker_script(linker_script: &str) -> Vec<&str> {
     let mut includes = vec![];
@@ -298,63 +289,81 @@ fn get_includes_from_linker_script(linker_script: &str) -> Vec<&str> {
 }
 
 struct Parser<'a> {
-    line: &'a str,
+    script: &'a str,
     // this is to track line number to write back the original linker_script
     ram_line: usize,
-    // this is to parse
     position: usize,
 }
 
 impl Parser<'_> {
     /// Looks for "RAM : ORIGIN = $origin, LENGTH = $length"
     fn find_ram_in_linker_script(&mut self) -> Option<MemoryEntry> {
-        if let Some(pos) = self.line.find("RAM") {
+        log::debug!("Find RAM: {}", &self.script);
+
+        // finds at which line RAM is
+        self.get_ram_line();
+
+        if let Some(pos) = self.script.find("RAM") {
             self.advance(pos);
         } else {
             return None;
         }
 
         self.parse_token("RAM");
-
+        log::debug!("Parse RAM: {}", &self.script);
         // jump over attributes like (xrw) see parse_attributes()
-        if let Some(i) = self.line.find(':') {
+        if let Some(i) = self.script.find(':') {
             self.advance(i);
         }
 
         self.parse_token(":");
         self.parse_token("ORIGIN");
         self.parse_token("=");
-
+        log::debug!("Parse ORIGN = : {}", &self.script);
         let origin = self.parse_expression();
 
         self.parse_token(",");
         self.parse_token("LENGTH");
         self.parse_token("=");
-
+        log::debug!("Parse Length = : {}", &self.script);
         let total_length = self.parse_expression();
 
-        return Some(MemoryEntry {
+        log::debug!(
+            "Memory Entry. \n RAM_line: {} ORIGIN: {}, length: {} ",
+            &self.ram_line,
+            origin,
+            total_length
+        );
+        Some(MemoryEntry {
             line: self.ram_line,
             origin,
             length: total_length,
-        });
+        })
     }
 
+    /// This function looks for the RAM position in the original script.
+    fn get_ram_line(&mut self) {
+        for (index, line) in self.script.lines().enumerate() {
+            if line.contains("RAM") {
+                self.ram_line = index;
+                return;
+            } else {
+                self.ram_line = 0;
+            }
+        }
+    }
     fn parse_token(&mut self, expect: &str) {
         self.eat_whitespace();
 
-        if self.line.starts_with(expect) {
+        if self.script.starts_with(expect) {
             self.advance(expect.len());
         }
     }
 
     fn eat_whitespace(&mut self) {
-        while let Some(ch) = self.line.chars().next() {
-            if ch == ' ' || ch == '\t' || ch == '\r' {
+        while let Some(ch) = self.script.chars().next() {
+            if ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n' {
                 self.advance(1);
-            } else if ch == '\n' {
-                self.advance(1);
-                self.ram_line += 1;
             } else {
                 return;
             }
@@ -362,7 +371,7 @@ impl Parser<'_> {
     }
 
     fn advance(&mut self, amount: usize) {
-        self.line = &self.line[amount..];
+        self.script = &self.script[amount..];
         self.position += amount;
     }
 
@@ -375,7 +384,7 @@ impl Parser<'_> {
 
             self.eat_whitespace();
 
-            if self.line.chars().next() == Some('+') {
+            if self.script.starts_with('+') {
                 self.advance(1);
             } else {
                 return total;
@@ -384,8 +393,11 @@ impl Parser<'_> {
     }
 
     fn parse_number(&mut self) -> u64 {
+        log::debug!("Number in parse number:{}", &self.script);
+        self.eat_whitespace();
+
         // find if the number is base 10 or 16
-        let radix = if self.line.starts_with("0x") {
+        let radix = if self.script.starts_with("0x") {
             self.advance("0x".len());
             16
         } else {
@@ -394,13 +406,13 @@ impl Parser<'_> {
         // we need to know how long the number is
         // that returns the position of the first non-hex-digit char in the input
         let number_len = self
-            .line
+            .script
             .find(|c: char| !c.is_ascii_hexdigit())
-            .unwrap_or(self.line.len());
+            .unwrap_or(self.script.len());
 
-        let mut number = u64::from_str_radix(&self.line[..number_len], radix).unwrap();
-
-        match self.line.chars().next() {
+        let mut number = u64::from_str_radix(&self.script[..number_len], radix).unwrap();
+        self.advance(number_len);
+        match self.script.chars().next() {
             Some('K') => {
                 number *= 1024;
                 self.advance(1);
@@ -438,7 +450,7 @@ mod tests {
 INCLUDE device.x
 ";
         let mut parser = Parser {
-            line: LINKER_SCRIPT,
+            script: LINKER_SCRIPT,
             position: 0,
             ram_line: 0,
         };
@@ -458,306 +470,383 @@ INCLUDE device.x
         );
     }
 
-    //     // Should return error?
-    //     //     #[test]
-    //     //     fn parse_unauthorized_units() {
-    //     //         const LINKER_SCRIPT: &str = "MEMORY
-    //     // {
-    //     //   FLASH : ORIGIN = 0x00000000, LENGTH = 256P
-    //     //   RAM : ORIGIN = 0x20000000, LENGTH = 64P
-    //     // }
-    //     //         assert_eq!(
-    //     //             find_ram_in_linker_script(LINKER_SCRIPT),
-    //     //             Some(MemoryEntry {
-    //     //                 line: 0,
-    //     //                 origin: 0x20000000,
-    //     //                 length: 64 * 1024,
-    //     //             })
-    //     //         );
-
+    // Should return error.
     //     #[test]
-    //     fn parse_no_units() {
+    //     fn parse_unauthorized_units() {
     //         const LINKER_SCRIPT: &str = "MEMORY
     // {
-    //   FLASH : ORIGIN = 0x00000000, LENGTH = 262144
-    //   RAM : ORIGIN = 0x20000000, LENGTH = 65536
-    // }
-
-    // INCLUDE device.x
-    // ";
-
-    //         assert_eq!(
-    //             find_ram_in_linker_script(LINKER_SCRIPT),
-    //             Some(MemoryEntry {
-    //                 line: 3,
-    //                 origin: 0x20000000,
-    //                 length: 64 * 1024,
-    //             })
-    //         );
-
-    //         assert_eq!(
-    //             get_includes_from_linker_script(LINKER_SCRIPT),
-    //             vec!["device.x"]
-    //         );
-    //     }
-
-    //     #[test]
-    //     fn parse_plus() {
-    //         const LINKER_SCRIPT: &str = "MEMORY
-    // {
-    //   FLASH : ORIGIN = 0x08000000, LENGTH = 2M
-    //   RAM : ORIGIN = 0x20020000, LENGTH = 368K + 16K
-    // }
-
-    // INCLUDE device.x
-    // ";
-
-    //         assert_eq!(
-    //             find_ram_in_linker_script(LINKER_SCRIPT),
-    //             Some(MemoryEntry {
-    //                 line: 3,
-    //                 origin: 0x20020000,
-    //                 length: (368 + 16) * 1024,
-    //             })
-    //         );
-
-    //         assert_eq!(
-    //             get_includes_from_linker_script(LINKER_SCRIPT),
-    //             vec!["device.x"]
-    //         );
-    //     }
-
-    //     //
-    //     #[test]
-    //     fn parse_plus_origin_k() {
-    //         const LINKER_SCRIPT: &str = "MEMORY
-    // {
-    //   FLASH : ORIGIN = 0x08000000, LENGTH = 2M
-    //   RAM : ORIGIN = 0x20020000 + 100K, LENGTH = 368K
+    //     FLASH : ORIGIN = 0x00000000, LENGTH = 256P
+    //     RAM : ORIGIN = 0x20000000, LENGTH = 64P
     // }
     // ";
-
-    //         assert_eq!(
-    //             find_ram_in_linker_script(LINKER_SCRIPT),
-    //             Some(MemoryEntry {
-    //                 line: 3,
-    //                 origin: 0x20020000 + (100 * 1024),
-    //                 length: 368 * 1024,
-    //             })
-    //         );
+    //         let mut parser = Parser {
+    //             script: LINKER_SCRIPT,
+    //             position: 0,
+    //             ram_line: 0,
+    //         };
+    //         assert_eq!(parser.find_ram_in_linker_script(), None);
     //     }
+    #[test]
+    fn parse_no_units() {
+        const LINKER_SCRIPT: &str = "MEMORY
+    {
+      FLASH : ORIGIN = 0x00000000, LENGTH = 262144
+      RAM : ORIGIN = 0x20000000, LENGTH = 65536
+    }
 
-    //     #[test]
-    //     fn parse_plus_origin_m() {
-    //         const LINKER_SCRIPT: &str = "MEMORY
-    // {
-    //   FLASH : ORIGIN = 0x08000000, LENGTH = 2M
-    //   RAM : ORIGIN = 0x20020000 + 100M, LENGTH = 368K
-    // }
+    INCLUDE device.x
+    ";
+        let mut parser = Parser {
+            script: LINKER_SCRIPT,
+            position: 0,
+            ram_line: 0,
+        };
 
-    // INCLUDE device.x
-    // ";
+        assert_eq!(
+            parser.find_ram_in_linker_script(),
+            Some(MemoryEntry {
+                line: 3,
+                origin: 0x20000000,
+                length: 64 * 1024,
+            })
+        );
 
-    //         assert_eq!(
-    //             find_ram_in_linker_script(LINKER_SCRIPT),
-    //             Some(MemoryEntry {
-    //                 line: 3,
-    //                 origin: 0x20020000 + (100 * 1024 * 1024),
-    //                 length: 368 * 1024,
-    //             })
-    //         );
+        assert_eq!(
+            get_includes_from_linker_script(LINKER_SCRIPT),
+            vec!["device.x"]
+        );
+    }
 
-    //         assert_eq!(
-    //             get_includes_from_linker_script(LINKER_SCRIPT),
-    //             vec!["device.x"]
-    //         );
-    //     }
+    #[test]
+    fn parse_plus() {
+        const LINKER_SCRIPT: &str = "MEMORY
+    {
+      FLASH : ORIGIN = 0x08000000, LENGTH = 2M
+      RAM : ORIGIN = 0x20020000, LENGTH = 368K + 16K
+    }
 
-    //     // test attributes https://sourceware.org/binutils/docs/ld/MEMORY.html
-    //     #[test]
-    //     fn parse_attributes() {
-    //         const LINKER_SCRIPT: &str = "MEMORY
-    // {
-    //     /* NOTE 1 K = 1 KiBi = 1024 bytes */
-    //     FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 1024K
-    //     RAM (xrw)  : ORIGIN = 0x20000000, LENGTH = 128K
-    // }
-    // ";
+    INCLUDE device.x
+    ";
 
-    //         assert_eq!(
-    //             find_ram_in_linker_script(LINKER_SCRIPT),
-    //             Some(MemoryEntry {
-    //                 line: 4,
-    //                 origin: 0x20000000,
-    //                 length: 128 * 1024,
-    //             })
-    //         );
-    //     }
+        let mut parser = Parser {
+            script: LINKER_SCRIPT,
+            position: 0,
+            ram_line: 0,
+        };
+
+        assert_eq!(
+            parser.find_ram_in_linker_script(),
+            Some(MemoryEntry {
+                line: 3,
+                origin: 0x20020000,
+                length: (368 + 16) * 1024,
+            })
+        );
+
+        assert_eq!(
+            get_includes_from_linker_script(LINKER_SCRIPT),
+            vec!["device.x"]
+        );
+    }
+
+    //
+    #[test]
+    fn parse_plus_origin_k() {
+        const LINKER_SCRIPT: &str = "MEMORY
+    {
+      FLASH : ORIGIN = 0x08000000, LENGTH = 2M
+      RAM : ORIGIN = 0x20020000 + 100K, LENGTH = 368K
+    }
+    ";
+
+        let mut parser = Parser {
+            script: LINKER_SCRIPT,
+            position: 0,
+            ram_line: 0,
+        };
+
+        assert_eq!(
+            parser.find_ram_in_linker_script(),
+            Some(MemoryEntry {
+                line: 3,
+                origin: 0x20020000 + (100 * 1024),
+                length: 368 * 1024,
+            })
+        );
+    }
+
+    #[test]
+    fn parse_plus_origin_m() {
+        const LINKER_SCRIPT: &str = "MEMORY
+    {
+      FLASH : ORIGIN = 0x08000000, LENGTH = 2M
+      RAM : ORIGIN = 0x20020000 + 100M, LENGTH = 368K
+    }
+
+    INCLUDE device.x
+    ";
+        let mut parser = Parser {
+            script: LINKER_SCRIPT,
+            position: 0,
+            ram_line: 0,
+        };
+        assert_eq!(
+            parser.find_ram_in_linker_script(),
+            Some(MemoryEntry {
+                line: 3,
+                origin: 0x20020000 + (100 * 1024 * 1024),
+                length: 368 * 1024,
+            })
+        );
+
+        assert_eq!(
+            get_includes_from_linker_script(LINKER_SCRIPT),
+            vec!["device.x"]
+        );
+    }
+
+    // test attributes https://sourceware.org/binutils/docs/ld/MEMORY.html
+    #[test]
+    fn parse_attributes() {
+        const LINKER_SCRIPT: &str = "MEMORY
+    {
+        /* NOTE 1 K = 1 KiBi = 1024 bytes */
+        FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 1024K
+        RAM (xrw)  : ORIGIN = 0x20000000, LENGTH = 128K
+    }
+    ";
+
+        let mut parser = Parser {
+            script: LINKER_SCRIPT,
+            position: 0,
+            ram_line: 0,
+        };
+        assert_eq!(
+            parser.find_ram_in_linker_script(),
+            Some(MemoryEntry {
+                line: 4,
+                origin: 0x20000000,
+                length: 128 * 1024,
+            })
+        );
+    }
 
     //     // Flip link should accept. Accepted by rust lld
-    //     #[test]
-    //     fn parse_new_line() {
-    //         const LINKER_SCRIPT: &str = "MEMORY
-    // {
-    //     FLASH : ORIGIN = 0x08000000, LENGTH = 2M
-    //     RAM : ORIGIN = 0x20000000,
-    //     LENGTH = 256K
-    // }
-    // ";
-    //         assert_eq!(
-    //             find_ram_in_linker_script(LINKER_SCRIPT),
-    //             Some(MemoryEntry {
-    //                 line: 3,
-    //                 origin: 0x20000000,
-    //                 length: 256 * 1024,
-    //             })
-    //         );
-    //     }
+    #[test]
+    fn parse_new_line() {
+        const LINKER_SCRIPT: &str = "MEMORY
+    {
+        FLASH : ORIGIN = 0x08000000, LENGTH = 2M
+        RAM : ORIGIN = 0x20000000,
+        LENGTH = 256K
+    }
+    ";
+        let mut parser = Parser {
+            script: LINKER_SCRIPT,
+            position: 0,
+            ram_line: 0,
+        };
+        assert_eq!(
+            parser.find_ram_in_linker_script(),
+            Some(MemoryEntry {
+                line: 3,
+                origin: 0x20000000,
+                length: 256 * 1024,
+            })
+        );
+    }
+
+    // Flip link should accept. Accepted by rust lld
+    #[test]
+    fn parse_new_lines() {
+        const LINKER_SCRIPT: &str = "MEMORY
+    {
+      RAM
+      :
+      ORIGIN
+      =
+      0x20000000
+      ,
+    LENGTH
+    =
+    256K
+    }
+    ";
+
+        let mut parser = Parser {
+            script: LINKER_SCRIPT,
+            position: 0,
+            ram_line: 0,
+        };
+        assert_eq!(
+            parser.find_ram_in_linker_script(),
+            Some(MemoryEntry {
+                line: 2,
+                origin: 0x20000000,
+                length: 256 * 1024,
+            })
+        );
+    }
 
     //     // Flip link should accept. Accepted by rust lld
-    //     #[test]
-    //     fn parse_new_lines() {
-    //         const LINKER_SCRIPT: &str = "MEMORY
-    // {
-    //   RAM
-    //   :
-    //   ORIGIN
-    //   =
-    //   0x20000000
-    //   ,
-    // LENGTH
-    // =
-    // 256K
-    // }
-    // ";
-    //         assert_eq!(
-    //             find_ram_in_linker_script(LINKER_SCRIPT),
-    //             Some(MemoryEntry {
-    //                 line: 2,
-    //                 origin: 0x20000000,
-    //                 length: 256 * 1024,
-    //             })
-    //         );
-    //     }
+    #[test]
+    fn parse_same_line() {
+        const LINKER_SCRIPT: &str =  "MEMORY { FLASH : ORIGIN = 0x00000000, LENGTH = 1024K RAM : ORIGIN = 0x20000000, LENGTH = 256K }";
+        let mut parser = Parser {
+            script: LINKER_SCRIPT,
+            position: 0,
+            ram_line: 0,
+        };
+        assert_eq!(
+            parser.find_ram_in_linker_script(),
+            Some(MemoryEntry {
+                line: 0,
+                origin: 0x20000000,
+                length: 256 * 1024,
+            })
+        );
+    }
 
     //     // Flip link should accept. Accepted by rust lld
-    //     #[test]
-    //     fn parse_same_line() {
-    //         const LINKER_SCRIPT: &str =  "MEMORY { FLASH : ORIGIN = 0x00000000, LENGTH = 1024K RAM : ORIGIN = 0x20000000, LENGTH = 256K }";
+    #[test]
+    fn parse_section() {
+        const LINKER_SCRIPT: &str = "MEMORY
+    {
+        FLASH : ORIGIN = 0x00000000, LENGTH = 1024K
+        RAM : ORIGIN = 0x20000000, LENGTH = 256K
+    };
 
-    //         assert_eq!(
-    //             find_ram_in_linker_script(LINKER_SCRIPT),
-    //             Some(MemoryEntry {
-    //                 line: 0,
-    //                 origin: 0x20000000,
-    //                 length: 256 * 1024,
-    //             })
-    //         );
-    //     }
+    SECTIONS {};";
 
-    //     // Flip link should accept. Accepted by rust lld
-    //     #[test]
-    //     fn parse_section() {
-    //         const LINKER_SCRIPT: &str = "MEMORY
-    // {
-    //     FLASH : ORIGIN = 0x00000000, LENGTH = 1024K
-    //     RAM : ORIGIN = 0x20000000, LENGTH = 256K
-    // };
+        let mut parser = Parser {
+            script: LINKER_SCRIPT,
+            position: 0,
+            ram_line: 0,
+        };
 
-    // SECTIONS {};";
-
-    //         assert_eq!(
-    //             find_ram_in_linker_script(LINKER_SCRIPT),
-    //             Some(MemoryEntry {
-    //                 line: 3,
-    //                 origin: 0x20000000,
-    //                 length: 256 * 1024,
-    //             })
-    //         );
-    //     }
+        assert_eq!(
+            parser.find_ram_in_linker_script(),
+            Some(MemoryEntry {
+                line: 3,
+                origin: 0x20000000,
+                length: 256 * 1024,
+            })
+        );
+    }
 
     //     // Flip link should accept. Accepted by rust lld
-    //     #[test]
-    //     fn parse_memory_replicate() {
-    //         const LINKER_SCRIPT: &str = "
-    // MEMORY { FLASH : ORIGIN = 0x00000000, LENGTH = 1024K }
-    // MEMORY { RAM : ORIGIN = 0x20000000, LENGTH = 256K }";
-    //         assert_eq!(
-    //             find_ram_in_linker_script(LINKER_SCRIPT),
-    //             Some(MemoryEntry {
-    //                 line: 2,
-    //                 origin: 0x20000000,
-    //                 length: 256 * 1024,
-    //             })
-    //         );
-    //     }
+    #[test]
+    fn parse_memory_replicate() {
+        const LINKER_SCRIPT: &str = "
+    MEMORY { FLASH : ORIGIN = 0x00000000, LENGTH = 1024K }
+    MEMORY { RAM : ORIGIN = 0x20000000, LENGTH = 256K }";
+
+        let mut parser = Parser {
+            script: LINKER_SCRIPT,
+            position: 0,
+            ram_line: 0,
+        };
+
+        assert_eq!(
+            parser.find_ram_in_linker_script(),
+            Some(MemoryEntry {
+                line: 2,
+                origin: 0x20000000,
+                length: 256 * 1024,
+            })
+        );
+    }
 
     //     // Flip link should accept. Accepted by rust lld
-    //     #[test]
-    //     fn parse_sections_replicate() {
-    //         const LINKER_SCRIPT: &str = "MEMORY
-    // {
-    //     FLASH : ORIGIN = 0x08000000, LENGTH = 2M
-    //     RAM : ORIGIN = 0x20020000, LENGTH = 368K
-    // }
-    // SECTIONS {}
-    // SECTIONS {}";
-    //         assert_eq!(
-    //             find_ram_in_linker_script(LINKER_SCRIPT),
-    //             Some(MemoryEntry {
-    //                 line: 3,
-    //                 origin: 0x20020000,
-    //                 length: 368 * 1024,
-    //             })
-    //         );
-    //     }
+    #[test]
+    fn parse_sections_replicate() {
+        const LINKER_SCRIPT: &str = "MEMORY
+    {
+        FLASH : ORIGIN = 0x08000000, LENGTH = 2M
+        RAM : ORIGIN = 0x20020000, LENGTH = 368K
+    }
+    SECTIONS {}
+    SECTIONS {}";
+
+        let mut parser = Parser {
+            script: LINKER_SCRIPT,
+            position: 0,
+            ram_line: 0,
+        };
+
+        assert_eq!(
+            parser.find_ram_in_linker_script(),
+            Some(MemoryEntry {
+                line: 3,
+                origin: 0x20020000,
+                length: 368 * 1024,
+            })
+        );
+    }
 
     //     // Flip link should accept. Accepted by rust lld
-    //     #[test]
-    //     fn parse_sections_include_memory() {
-    //         const LINKER_SCRIPT: &str = "MEMORY
-    // {
-    //     FLASH : ORIGIN = 0x08000000, LENGTH = 2M
-    //     RAM : ORIGIN = 0x20020000, LENGTH = 368K
-    // }
+    #[test]
+    fn parse_sections_include_memory() {
+        const LINKER_SCRIPT: &str = "MEMORY
+    {
+        FLASH : ORIGIN = 0x08000000, LENGTH = 2M
+        RAM : ORIGIN = 0x20020000, LENGTH = 368K
+    }
 
-    // SECTIONS {
-    // MEMORY : {}
-    // }";
-    //         assert_eq!(
-    //             find_ram_in_linker_script(LINKER_SCRIPT),
-    //             Some(MemoryEntry {
-    //                 line: 3,
-    //                 origin: 0x20020000,
-    //                 length: 368 * 1024,
-    //             })
-    //         );
-    //     }
+    SECTIONS {
+    MEMORY : {}
+    }";
+
+        let mut parser = Parser {
+            script: LINKER_SCRIPT,
+            position: 0,
+            ram_line: 0,
+        };
+        assert_eq!(
+            parser.find_ram_in_linker_script(),
+            Some(MemoryEntry {
+                line: 3,
+                origin: 0x20020000,
+                length: 368 * 1024,
+            })
+        );
+    }
 
     //     // Flip link should accept. Accepted by rust lld
-    //     #[test]
-    //     fn parse_comment() {
-    //         const LINKER_SCRIPT: &str = "/*
-    // MEMORY
-    // {
-    //     RAM (rw) : ORIGIN = 0x20020000, LENGTH = 368K
-    // }
-    // */
-    // ";
-    //         assert_eq!(find_ram_in_linker_script(LINKER_SCRIPT), None);
-    //     }
-    // }
+    #[test]
+    fn parse_comment() {
+        const LINKER_SCRIPT: &str = "/*
+    MEMORY
+    {
+        RAM (rw) : ORIGIN = 0x20020000, LENGTH = 368K
+    }
+    */
+    ";
 
-    // // Flip link should accept. Accepted by rust lld
+        let mut parser = Parser {
+            script: LINKER_SCRIPT,
+            position: 0,
+            ram_line: 0,
+        };
+        assert_eq!(parser.find_ram_in_linker_script(), None);
+    }
+}
 
-    // #[test]
-    // fn parse_empty() {
-    //     const LINKER_SCRIPT: &str = "
-    // MEMORY {}
+// // Flip link should accept. Accepted by rust lld
 
-    // SECTIONS {
-    // MEMORY : {}
-    // }
-    // ";
-    //     assert_eq!(find_ram_in_linker_script(LINKER_SCRIPT), None);
+#[test]
+fn parse_empty() {
+    const LINKER_SCRIPT: &str = "
+    MEMORY {}
+
+    SECTIONS {
+    MEMORY : {}
+    }
+    ";
+    let mut parser = Parser {
+        script: LINKER_SCRIPT,
+        position: 0,
+        ram_line: 0,
+    };
+    assert_eq!(parser.find_ram_in_linker_script(), None);
 }
