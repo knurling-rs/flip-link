@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- [#71]: Add changelog enforcer
+- [#70]: Support addition in ORIGIN
+
+[#71]: https://github.com/knurling-rs/flip-link/pull/71
+[#70]: https://github.com/knurling-rs/flip-link/pull/70
+
 ## [v0.1.6] - 2022-03-23
 
 ### Fixed
