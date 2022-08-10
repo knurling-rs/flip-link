@@ -30,7 +30,7 @@ jobs:
 
       # install Rust
       - name: Install Rust toolchain
-        run: rustup toolchain install ${{ matrix.rust }}
+        run: rustup toolchain install --profile=minimal ${{ matrix.rust }}
       - name: Set default Rust toolchain
         run: rustup default ${{ matrix.rust }}
       - name: Install Rust target for cross-compilation
@@ -68,7 +68,7 @@ jobs:
 
       # install Rust
       - name: Install Rust toolchain
-        run: rustup toolchain install stable
+        run: rustup toolchain install --profile=minimal stable
       - name: Set default Rust toolchain
         run: rustup default stable
       - name: Install Rust components
