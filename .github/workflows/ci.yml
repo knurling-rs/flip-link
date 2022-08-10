@@ -27,12 +27,16 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: ${{ matrix.rust }}
-          override: true
-          target: ${{ env.CORE_TARGET }}
+
+      # install Rust
+      - name: Install Rust toolchain
+        run: rustup toolchain install --profile=minimal ${{ matrix.rust }}
+      - name: Set default Rust toolchain
+        run: rustup default ${{ matrix.rust }}
+      - name: Install Rust target for cross-compilation
+        run: rustup target add ${{ env.CORE_TARGET }} --toolchain ${{ matrix.rust }}
+
+      # caching
       - name: make rustc version available to cache keys
         id: rustc
         run: echo "::set-output name=version::$(rustc -V)"
@@ -52,6 +56,8 @@ jobs:
           key: cargo-target-${{ runner.os }}-${{ steps.rustc.outputs.version }}-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             cargo-target-${{ runner.os }}-${{ steps.rustc.outputs.version }}-
+
+      # run tests
       - name: Run testsuite
         run: cargo xtest
 
@@ -59,17 +65,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          components: clippy, rustfmt
-      - run: cargo fmt --all -- --check
-      - uses: actions-rs/clippy-check@v1
-        with:
-          args: "-- --deny warnings"
-          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # install Rust
+      - name: Install Rust toolchain
+        run: rustup toolchain install --profile=minimal stable
+      - name: Set default Rust toolchain
+        run: rustup default stable
+      - name: Install Rust components
+        run: |
+          rustup component add rustfmt clippy
+          cargo fmt --version
+          cargo clippy --version
+
+      # run tests
+      - run: cargo fmt -- --check
+      - run: cargo clippy -- --deny warnings
+      - run: cargo fmt -- --check
+        working-directory: test-flip-link-app/
+      - run: cargo clippy -- --deny warnings
+        working-directory: test-flip-link-app/
 
   # Refs: https://github.com/rust-lang/crater/blob/9ab6f9697c901c4a44025cf0a39b73ad5b37d198/.github/workflows/bors.yml#L125-L149
   # bors.tech integration

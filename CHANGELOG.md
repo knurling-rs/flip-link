@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- [#72]: CI: Install Rust manually
 - [#71]: Add changelog enforcer
 - [#70]: Support addition in ORIGIN
 
+[#72]: https://github.com/knurling-rs/flip-link/pull/72
 [#71]: https://github.com/knurling-rs/flip-link/pull/71
 [#70]: https://github.com/knurling-rs/flip-link/pull/70
 
