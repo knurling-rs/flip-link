@@ -300,25 +300,24 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
             line = line[i..].trim();
         }
 
-        line = eat!(line, ":");
+        line = eat!(line, ':');
         line = eat!(line, "ORIGIN");
-        line = eat!(line, "=");
-        let boundary_pos = tryc!(line.find(|c| c == ',').ok_or(()));
+        line = eat!(line, '=');
 
+        let boundary_pos = tryc!(line.find(',').ok_or(()));
         let origin = perform_addition(&line[..boundary_pos]);
-
         line = line[boundary_pos..].trim();
 
-        line = eat!(line, ",");
+        line = eat!(line, ',');
         line = eat!(line, "LENGTH");
-        line = eat!(line, "=");
+        line = eat!(line, '=');
 
-        let total_length = perform_addition(line);
+        let length = perform_addition(line);
 
         return Some(MemoryEntry {
             line: index,
             origin,
-            length: total_length,
+            length,
         });
     }
 
