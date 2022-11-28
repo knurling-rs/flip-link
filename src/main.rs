@@ -282,14 +282,10 @@ macro_rules! tryc {
 }
 
 fn get_includes_from_linker_script(linker_script: &str) -> Vec<&str> {
-    let mut includes = vec![];
-    for mut line in linker_script.lines() {
-        line = line.trim();
-        line = eat!(line, "INCLUDE");
-        includes.push(line);
-    }
-
-    includes
+    linker_script
+        .lines()
+        .filter_map(|line| line.trim().strip_prefix("INCLUDE").map(str::trim))
+        .collect()
 }
 
 /// Looks for "RAM : ORIGIN = $origin, LENGTH = $length"
