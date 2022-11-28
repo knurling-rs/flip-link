@@ -20,9 +20,6 @@ const EXIT_CODE_FAILURE: i32 = 1;
 const SP_ALIGN: u64 = 8;
 
 fn main() -> Result<()> {
-    // clippy complains about redundant closure, but in fact
-    // the function signature isn't 100% compatible so we must wrap it
-    #[allow(clippy::redundant_closure)]
     notmain().map(|code| process::exit(code))
 }
 
