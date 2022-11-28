@@ -16,9 +16,6 @@ jobs:
   test:
     strategy:
       matrix:
-        rust:
-          - stable
-          - nightly
         os:
           - ubuntu-latest
           - macOS-latest
@@ -26,22 +23,20 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       # install Rust
-      - name: Install Rust toolchain
-        run: rustup toolchain install --profile=minimal ${{ matrix.rust }}
-      - name: Set default Rust toolchain
-        run: rustup default ${{ matrix.rust }}
+      - name: Use the latest stable release
+        run: rustup update stable && rustup default stable
       - name: Install Rust target for cross-compilation
-        run: rustup target add ${{ env.CORE_TARGET }} --toolchain ${{ matrix.rust }}
+        run: rustup target add ${{ env.CORE_TARGET }}
 
       # caching
       - name: make rustc version available to cache keys
         id: rustc
         run: echo "::set-output name=version::$(rustc -V)"
       - name: cache Cargo registry
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/.cargo/registry/cache
@@ -50,7 +45,7 @@ jobs:
           restore-keys: |
             cargo-registry-
       - name: cache Cargo build artifacts
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: target
           key: cargo-target-${{ runner.os }}-${{ steps.rustc.outputs.version }}-${{ hashFiles('**/Cargo.lock') }}
@@ -64,24 +59,17 @@ jobs:
   static-checks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       # install Rust
-      - name: Install Rust toolchain
-        run: rustup toolchain install --profile=minimal stable
-      - name: Set default Rust toolchain
-        run: rustup default stable
-      - name: Install Rust components
-        run: |
-          rustup component add rustfmt clippy
-          cargo fmt --version
-          cargo clippy --version
+      - name: Use the latest stable release
+        run: rustup update stable && rustup default stable
 
       # run tests
       - run: cargo fmt -- --check
-      - run: cargo clippy -- --deny warnings
       - run: cargo fmt -- --check
         working-directory: test-flip-link-app/
+      - run: cargo clippy -- --deny warnings
       - run: cargo clippy -- --deny warnings
         working-directory: test-flip-link-app/
 

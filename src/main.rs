@@ -354,7 +354,7 @@ fn perform_addition(line: &str) -> u64 {
             total_length += length * 1024;
         } else if unit == Some('M') {
             total_length += length * 1024 * 1024;
-        } else if unit == None {
+        } else if unit.is_none() {
             total_length += length;
         }
     }
