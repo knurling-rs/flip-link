@@ -332,31 +332,36 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
 /// Perform addition when ORIGN or LENGTH variables contain an addition.
 /// If there is no addition to be performed, it will return the `u64` value.
 fn perform_addition(line: &str) -> u64 {
-    let segments: Vec<&str> = line.split('+').map(|s| s.trim().trim_end()).collect();
+    let segments = line.split('+').map(|s| s.trim()).collect::<Vec<_>>();
 
     let mut total_length = 0;
     for segment in segments {
-        let boundary_pos = segment
-            .find(|c| c == 'K' || c == 'M')
-            .unwrap_or(segment.len());
-        const HEX: &str = "0x";
-        // Special case parsing for hex numbers.
-        let length: u64 = if segment.starts_with(HEX) {
-            tryc!(u64::from_str_radix(&segment[HEX.len()..boundary_pos], 16))
-        } else {
-            tryc!(segment[..boundary_pos].parse())
+        // Split number and the optional unit
+        let (number, unit) = match segment.find(['K', 'M']) {
+            Some(unit_pos) => {
+                let (number, unit) = segment.split_at(unit_pos);
+                (number, Some(unit))
+            }
+            None => (segment, None),
         };
 
-        let raw = &segment[boundary_pos..];
-        let mut chars = raw.chars();
-        let unit = chars.next();
-        if unit == Some('K') {
-            total_length += length * 1024;
-        } else if unit == Some('M') {
-            total_length += length * 1024 * 1024;
-        } else if unit.is_none() {
-            total_length += length;
-        }
+        // Parse number
+        let (number, radix) = match number.strip_prefix("0x") {
+            Some(s) => (s, 16),
+            None => (number, 10),
+        };
+        let length = tryc!(u64::from_str_radix(number, radix));
+
+        // Handle unit
+        let multiplier = match unit {
+            Some("K") => 1024,
+            Some("M") => 1024 * 1024,
+            None => 1,
+            _ => unreachable!(),
+        };
+
+        // Add length
+        total_length += length * multiplier;
     }
     total_length
 }
