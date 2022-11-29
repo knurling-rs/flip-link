@@ -32,9 +32,8 @@ fn notmain() -> Result<i32> {
     {
         let exit_status = linking::link_normally(&args)?;
         if !exit_status.success() {
-            eprintln!();
             eprintln!(
-                "flip-link: the native linker failed to link the program normally; \
+                "\nflip-link: the native linker failed to link the program normally; \
                  please check your project configuration and linker scripts"
             );
             return Ok(exit_status.code().unwrap_or(EXIT_CODE_FAILURE));
@@ -52,17 +51,17 @@ fn notmain() -> Result<i32> {
     for linker_script in linker_scripts {
         let script_contents = fs::read_to_string(linker_script.path())?;
         if let Some(entry) = find_ram_in_linker_script(&script_contents) {
-            log::debug!("found {:?} in {}", entry, linker_script.path().display());
+            log::debug!("found {entry:?} in {}", linker_script.path().display());
             ram_path_entry = Some((linker_script, entry));
             break;
         }
     }
-    let (ram_linker_script, ram_entry) = ram_path_entry
-        .ok_or_else(|| "MEMORY.RAM not found after scanning linker scripts".to_string())?;
+    let (ram_linker_script, ram_entry) =
+        ram_path_entry.ok_or("MEMORY.RAM not found after scanning linker scripts")?;
 
     let output_path = argument_parser::get_output_path(&args)?;
-    let elf = &*fs::read(output_path)?;
-    let object = object::File::parse(elf)?;
+    let elf = fs::read(output_path)?;
+    let object = object::File::parse(elf.as_slice())?;
 
     // TODO assert that `_stack_start == ORIGIN(RAM) + LENGTH(RAM)`
     // if that's not the case the user has specified a custom location for the stack; we should
@@ -80,11 +79,7 @@ fn notmain() -> Result<i32> {
     );
     let new_length = ram_entry.end() - new_origin;
 
-    log::info!(
-        "new RAM region: ORIGIN={:#x}, LENGTH={}",
-        new_origin,
-        new_length
-    );
+    log::info!("new RAM region: ORIGIN={new_origin:#x}, LENGTH={new_length}");
 
     // to overwrite RAM we'll create a new linker script in a temporary directory
     let exit_status = in_tempdir(|tempdir| {
@@ -93,14 +88,12 @@ fn notmain() -> Result<i32> {
         let mut new_linker_script = File::create(tempdir.join(ram_linker_script.file_name()))?;
 
         for (index, line) in original_linker_script.lines().enumerate() {
-            if index == ram_entry.line {
-                writeln!(
+            match index == ram_entry.line {
+                true => writeln!(
                     new_linker_script,
-                    "  RAM : ORIGIN = {:#x}, LENGTH = {}",
-                    new_origin, new_length
-                )?;
-            } else {
-                writeln!(new_linker_script, "{}", line)?;
+                    "  RAM : ORIGIN = {new_origin:#x}, LENGTH = {new_length}"
+                )?,
+                false => writeln!(new_linker_script, "{line}")?,
             }
         }
         new_linker_script.flush()?;
