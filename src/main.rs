@@ -116,7 +116,7 @@ fn in_tempdir<T>(callback: impl FnOnce(&Path) -> Result<T>) -> Result<T> {
     getrandom::getrandom(&mut random).map_err(|e| e.to_string())?;
 
     let mut path = std::env::temp_dir();
-    path.push(format!("flip-link-{:02x?}", random));
+    path.push(format!("flip-link-{random:02x?}"));
     fs::create_dir(&path)?;
 
     let res = callback(&path);
@@ -137,7 +137,7 @@ fn compute_span_of_ram_sections(ram_entry: MemoryEntry, object: object::File) ->
     let mut found_a_section = false;
     for section in object.sections() {
         if let SectionFlags::Elf { sh_flags } = section.flags() {
-            if sh_flags & elf::SHF_ALLOC as u64 != 0 {
+            if (sh_flags & elf::SHF_ALLOC as u64) != 0 {
                 let start = section.address();
                 let size = section.size();
                 let end = start + size;
@@ -169,12 +169,7 @@ fn compute_span_of_ram_sections(ram_entry: MemoryEntry, object: object::File) ->
         used_ram_end - used_ram_start
     };
 
-    log::info!(
-        "used RAM spans: origin={:#x}, length={}, align={}",
-        used_ram_start,
-        used_ram_length,
-        used_ram_align
-    );
+    log::info!("used RAM spans: origin={used_ram_start:#x}, length={used_ram_length}, align={used_ram_align}");
 
     (used_ram_length, used_ram_align)
 }
@@ -213,12 +208,12 @@ fn get_linker_scripts(args: &[String], current_dir: &Path) -> Result<Vec<LinkerS
             let full_path = dir.join(&*filename);
 
             if full_path.exists() {
-                log::trace!("found {} in {}", filename, dir.display());
+                log::trace!("found {filename} in {}", dir.display());
                 let contents = fs::read_to_string(&full_path)?;
 
                 // also load linker scripts `INCLUDE`d by other scripts
                 for include in get_includes_from_linker_script(&contents) {
-                    log::trace!("{} INCLUDEs {}", filename, include);
+                    log::trace!("{filename} INCLUDEs {include}");
                     search_targets.push(Cow::Owned(include.to_string()));
                 }
 
