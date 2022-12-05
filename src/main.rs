@@ -353,13 +353,12 @@ mod tests {
     #[test]
     fn parse() {
         const LINKER_SCRIPT: &str = "MEMORY
-{
-  FLASH : ORIGIN = 0x00000000, LENGTH = 256K
-  RAM : ORIGIN = 0x20000000, LENGTH = 64K
-}
+        {
+            FLASH : ORIGIN = 0x00000000, LENGTH = 256K
+            RAM : ORIGIN = 0x20000000, LENGTH = 64K
+        }
 
-INCLUDE device.x
-";
+        INCLUDE device.x";
 
         assert_eq!(
             find_ram_in_linker_script(LINKER_SCRIPT),
@@ -379,13 +378,12 @@ INCLUDE device.x
     #[test]
     fn parse_no_units() {
         const LINKER_SCRIPT: &str = "MEMORY
-{
-  FLASH : ORIGIN = 0x00000000, LENGTH = 262144
-  RAM : ORIGIN = 0x20000000, LENGTH = 65536
-}
+        {
+            FLASH : ORIGIN = 0x00000000, LENGTH = 262144
+            RAM : ORIGIN = 0x20000000, LENGTH = 65536
+        }
 
-INCLUDE device.x
-";
+        INCLUDE device.x";
 
         assert_eq!(
             find_ram_in_linker_script(LINKER_SCRIPT),
@@ -421,13 +419,12 @@ INCLUDE device.x
     #[test]
     fn parse_plus() {
         const LINKER_SCRIPT: &str = "MEMORY
-{
-  FLASH : ORIGIN = 0x08000000, LENGTH = 2M
-  RAM : ORIGIN = 0x20020000, LENGTH = 368K + 16K
-}
+        {
+            FLASH : ORIGIN = 0x08000000, LENGTH = 2M
+            RAM : ORIGIN = 0x20020000, LENGTH = 368K + 16K
+        }
 
-INCLUDE device.x
-";
+        INCLUDE device.x";
 
         assert_eq!(
             find_ram_in_linker_script(LINKER_SCRIPT),
@@ -447,13 +444,12 @@ INCLUDE device.x
     #[test]
     fn parse_plus_origin_k() {
         const LINKER_SCRIPT: &str = "MEMORY
-{
-  FLASH : ORIGIN = 0x08000000, LENGTH = 2M
-  RAM : ORIGIN = 0x20020000 + 100K, LENGTH = 368K
-}
+        {
+            FLASH : ORIGIN = 0x08000000, LENGTH = 2M
+            RAM : ORIGIN = 0x20020000 + 100K, LENGTH = 368K
+        }
 
-INCLUDE device.x
-";
+        INCLUDE device.x";
 
         assert_eq!(
             find_ram_in_linker_script(LINKER_SCRIPT),
@@ -473,13 +469,12 @@ INCLUDE device.x
     #[test]
     fn parse_plus_origin_no_units() {
         const LINKER_SCRIPT: &str = "MEMORY
-{
-  FLASH : ORIGIN = 0x08000000, LENGTH = 2M
-  RAM : ORIGIN = 0x20020000 + 1000, LENGTH = 368K
-}
+        {
+            FLASH : ORIGIN = 0x08000000, LENGTH = 2M
+            RAM : ORIGIN = 0x20020000 + 1000, LENGTH = 368K
+        }
 
-INCLUDE device.x
-";
+        INCLUDE device.x";
 
         assert_eq!(
             find_ram_in_linker_script(LINKER_SCRIPT),
@@ -499,13 +494,12 @@ INCLUDE device.x
     #[test]
     fn parse_plus_origin_m() {
         const LINKER_SCRIPT: &str = "MEMORY
-{
-  FLASH : ORIGIN = 0x08000000, LENGTH = 2M
-  RAM : ORIGIN = 0x20020000 + 100M, LENGTH = 368K
-}
+        {
+            FLASH : ORIGIN = 0x08000000, LENGTH = 2M
+            RAM : ORIGIN = 0x20020000 + 100M, LENGTH = 368K
+        }
 
-INCLUDE device.x
-";
+        INCLUDE device.x";
 
         assert_eq!(
             find_ram_in_linker_script(LINKER_SCRIPT),
@@ -526,12 +520,11 @@ INCLUDE device.x
     #[test]
     fn parse_attributes() {
         const LINKER_SCRIPT: &str = "MEMORY
-{
-    /* NOTE 1 K = 1 KiBi = 1024 bytes */
-    FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 1024K
-    RAM (xrw)  : ORIGIN = 0x20000000, LENGTH = 128K
-}
-";
+        {
+            /* NOTE 1 K = 1 KiBi = 1024 bytes */
+            FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 1024K
+            RAM (xrw)  : ORIGIN = 0x20000000, LENGTH = 128K
+        }";
 
         assert_eq!(
             find_ram_in_linker_script(LINKER_SCRIPT),
