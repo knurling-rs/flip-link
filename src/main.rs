@@ -20,9 +20,6 @@ const EXIT_CODE_FAILURE: i32 = 1;
 const SP_ALIGN: u64 = 8;
 
 fn main() -> Result<()> {
-    // clippy complains about redundant closure, but in fact
-    // the function signature isn't 100% compatible so we must wrap it
-    #[allow(clippy::redundant_closure)]
     notmain().map(|code| process::exit(code))
 }
 
@@ -35,9 +32,8 @@ fn notmain() -> Result<i32> {
     {
         let exit_status = linking::link_normally(&args)?;
         if !exit_status.success() {
-            eprintln!();
             eprintln!(
-                "flip-link: the native linker failed to link the program normally; \
+                "\nflip-link: the native linker failed to link the program normally; \
                  please check your project configuration and linker scripts"
             );
             return Ok(exit_status.code().unwrap_or(EXIT_CODE_FAILURE));
@@ -55,17 +51,17 @@ fn notmain() -> Result<i32> {
     for linker_script in linker_scripts {
         let script_contents = fs::read_to_string(linker_script.path())?;
         if let Some(entry) = find_ram_in_linker_script(&script_contents) {
-            log::debug!("found {:?} in {}", entry, linker_script.path().display());
+            log::debug!("found {entry:?} in {}", linker_script.path().display());
             ram_path_entry = Some((linker_script, entry));
             break;
         }
     }
-    let (ram_linker_script, ram_entry) = ram_path_entry
-        .ok_or_else(|| "MEMORY.RAM not found after scanning linker scripts".to_string())?;
+    let (ram_linker_script, ram_entry) =
+        ram_path_entry.ok_or("MEMORY.RAM not found after scanning linker scripts")?;
 
     let output_path = argument_parser::get_output_path(&args)?;
-    let elf = &*fs::read(output_path)?;
-    let object = object::File::parse(elf)?;
+    let elf = fs::read(output_path)?;
+    let object = object::File::parse(elf.as_slice())?;
 
     // TODO assert that `_stack_start == ORIGIN(RAM) + LENGTH(RAM)`
     // if that's not the case the user has specified a custom location for the stack; we should
@@ -83,11 +79,7 @@ fn notmain() -> Result<i32> {
     );
     let new_length = ram_entry.end() - new_origin;
 
-    log::info!(
-        "new RAM region: ORIGIN={:#x}, LENGTH={}",
-        new_origin,
-        new_length
-    );
+    log::info!("new RAM region: ORIGIN={new_origin:#x}, LENGTH={new_length}");
 
     // to overwrite RAM we'll create a new linker script in a temporary directory
     let exit_status = in_tempdir(|tempdir| {
@@ -99,11 +91,10 @@ fn notmain() -> Result<i32> {
             if index == ram_entry.line {
                 writeln!(
                     new_linker_script,
-                    "  RAM : ORIGIN = {:#x}, LENGTH = {}",
-                    new_origin, new_length
-                )?;
+                    "  RAM : ORIGIN = {new_origin:#x}, LENGTH = {new_length}"
+                )?
             } else {
-                writeln!(new_linker_script, "{}", line)?;
+                writeln!(new_linker_script, "{line}")?
             }
         }
         new_linker_script.flush()?;
@@ -126,7 +117,7 @@ fn in_tempdir<T>(callback: impl FnOnce(&Path) -> Result<T>) -> Result<T> {
     getrandom::getrandom(&mut random).map_err(|e| e.to_string())?;
 
     let mut path = std::env::temp_dir();
-    path.push(format!("flip-link-{:02x?}", random));
+    path.push(format!("flip-link-{random:02x?}"));
     fs::create_dir(&path)?;
 
     let res = callback(&path);
@@ -147,7 +138,7 @@ fn compute_span_of_ram_sections(ram_entry: MemoryEntry, object: object::File) ->
     let mut found_a_section = false;
     for section in object.sections() {
         if let SectionFlags::Elf { sh_flags } = section.flags() {
-            if sh_flags & elf::SHF_ALLOC as u64 != 0 {
+            if (sh_flags & elf::SHF_ALLOC as u64) != 0 {
                 let start = section.address();
                 let size = section.size();
                 let end = start + size;
@@ -179,12 +170,7 @@ fn compute_span_of_ram_sections(ram_entry: MemoryEntry, object: object::File) ->
         used_ram_end - used_ram_start
     };
 
-    log::info!(
-        "used RAM spans: origin={:#x}, length={}, align={}",
-        used_ram_start,
-        used_ram_length,
-        used_ram_align
-    );
+    log::info!("used RAM spans: origin={used_ram_start:#x}, length={used_ram_length}, align={used_ram_align}");
 
     (used_ram_length, used_ram_align)
 }
@@ -223,12 +209,12 @@ fn get_linker_scripts(args: &[String], current_dir: &Path) -> Result<Vec<LinkerS
             let full_path = dir.join(&*filename);
 
             if full_path.exists() {
-                log::trace!("found {} in {}", filename, dir.display());
+                log::trace!("found {filename} in {}", dir.display());
                 let contents = fs::read_to_string(&full_path)?;
 
                 // also load linker scripts `INCLUDE`d by other scripts
                 for include in get_includes_from_linker_script(&contents) {
-                    log::trace!("{} INCLUDEs {}", filename, include);
+                    log::trace!("{filename} INCLUDEs {include}");
                     search_targets.push(Cow::Owned(include.to_string()));
                 }
 
@@ -282,14 +268,10 @@ macro_rules! tryc {
 }
 
 fn get_includes_from_linker_script(linker_script: &str) -> Vec<&str> {
-    let mut includes = vec![];
-    for mut line in linker_script.lines() {
-        line = line.trim();
-        line = eat!(line, "INCLUDE");
-        includes.push(line);
-    }
-
-    includes
+    linker_script
+        .lines()
+        .filter_map(|line| line.trim().strip_prefix("INCLUDE").map(str::trim))
+        .collect()
 }
 
 /// Looks for "RAM : ORIGIN = $origin, LENGTH = $length"
@@ -304,25 +286,24 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
             line = line[i..].trim();
         }
 
-        line = eat!(line, ":");
+        line = eat!(line, ':');
         line = eat!(line, "ORIGIN");
-        line = eat!(line, "=");
-        let boundary_pos = tryc!(line.find(|c| c == ',').ok_or(()));
+        line = eat!(line, '=');
 
+        let boundary_pos = tryc!(line.find(',').ok_or(()));
         let origin = perform_addition(&line[..boundary_pos]);
-
         line = line[boundary_pos..].trim();
 
-        line = eat!(line, ",");
+        line = eat!(line, ',');
         line = eat!(line, "LENGTH");
-        line = eat!(line, "=");
+        line = eat!(line, '=');
 
-        let total_length = perform_addition(line);
+        let length = perform_addition(line);
 
         return Some(MemoryEntry {
             line: index,
             origin,
-            length: total_length,
+            length,
         });
     }
 
@@ -332,31 +313,36 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
 /// Perform addition when ORIGN or LENGTH variables contain an addition.
 /// If there is no addition to be performed, it will return the `u64` value.
 fn perform_addition(line: &str) -> u64 {
-    let segments: Vec<&str> = line.split('+').map(|s| s.trim().trim_end()).collect();
+    let segments = line.split('+').map(str::trim).collect::<Vec<_>>();
 
     let mut total_length = 0;
     for segment in segments {
-        let boundary_pos = segment
-            .find(|c| c == 'K' || c == 'M')
-            .unwrap_or(segment.len());
-        const HEX: &str = "0x";
-        // Special case parsing for hex numbers.
-        let length: u64 = if segment.starts_with(HEX) {
-            tryc!(u64::from_str_radix(&segment[HEX.len()..boundary_pos], 16))
-        } else {
-            tryc!(segment[..boundary_pos].parse())
+        // Split number and the optional unit
+        let (number, unit) = match segment.find(['K', 'M']) {
+            Some(unit_pos) => {
+                let (number, unit) = segment.split_at(unit_pos);
+                (number, Some(unit))
+            }
+            None => (segment, None),
         };
 
-        let raw = &segment[boundary_pos..];
-        let mut chars = raw.chars();
-        let unit = chars.next();
-        if unit == Some('K') {
-            total_length += length * 1024;
-        } else if unit == Some('M') {
-            total_length += length * 1024 * 1024;
-        } else if unit.is_none() {
-            total_length += length;
-        }
+        // Parse number
+        let (number, radix) = match number.strip_prefix("0x") {
+            Some(s) => (s, 16),
+            None => (number, 10),
+        };
+        let length = tryc!(u64::from_str_radix(number, radix));
+
+        // Handle unit
+        let multiplier = match unit {
+            Some("K") => 1024,
+            Some("M") => 1024 * 1024,
+            None => 1,
+            _ => unreachable!(),
+        };
+
+        // Add length
+        total_length += length * multiplier;
     }
     total_length
 }
@@ -368,13 +354,12 @@ mod tests {
     #[test]
     fn parse() {
         const LINKER_SCRIPT: &str = "MEMORY
-{
-  FLASH : ORIGIN = 0x00000000, LENGTH = 256K
-  RAM : ORIGIN = 0x20000000, LENGTH = 64K
-}
+        {
+            FLASH : ORIGIN = 0x00000000, LENGTH = 256K
+            RAM : ORIGIN = 0x20000000, LENGTH = 64K
+        }
 
-INCLUDE device.x
-";
+        INCLUDE device.x";
 
         assert_eq!(
             find_ram_in_linker_script(LINKER_SCRIPT),
@@ -394,13 +379,12 @@ INCLUDE device.x
     #[test]
     fn parse_no_units() {
         const LINKER_SCRIPT: &str = "MEMORY
-{
-  FLASH : ORIGIN = 0x00000000, LENGTH = 262144
-  RAM : ORIGIN = 0x20000000, LENGTH = 65536
-}
+        {
+            FLASH : ORIGIN = 0x00000000, LENGTH = 262144
+            RAM : ORIGIN = 0x20000000, LENGTH = 65536
+        }
 
-INCLUDE device.x
-";
+        INCLUDE device.x";
 
         assert_eq!(
             find_ram_in_linker_script(LINKER_SCRIPT),
@@ -436,13 +420,12 @@ INCLUDE device.x
     #[test]
     fn parse_plus() {
         const LINKER_SCRIPT: &str = "MEMORY
-{
-  FLASH : ORIGIN = 0x08000000, LENGTH = 2M
-  RAM : ORIGIN = 0x20020000, LENGTH = 368K + 16K
-}
+        {
+            FLASH : ORIGIN = 0x08000000, LENGTH = 2M
+            RAM : ORIGIN = 0x20020000, LENGTH = 368K + 16K
+        }
 
-INCLUDE device.x
-";
+        INCLUDE device.x";
 
         assert_eq!(
             find_ram_in_linker_script(LINKER_SCRIPT),
@@ -462,13 +445,12 @@ INCLUDE device.x
     #[test]
     fn parse_plus_origin_k() {
         const LINKER_SCRIPT: &str = "MEMORY
-{
-  FLASH : ORIGIN = 0x08000000, LENGTH = 2M
-  RAM : ORIGIN = 0x20020000 + 100K, LENGTH = 368K
-}
+        {
+            FLASH : ORIGIN = 0x08000000, LENGTH = 2M
+            RAM : ORIGIN = 0x20020000 + 100K, LENGTH = 368K
+        }
 
-INCLUDE device.x
-";
+        INCLUDE device.x";
 
         assert_eq!(
             find_ram_in_linker_script(LINKER_SCRIPT),
@@ -488,13 +470,12 @@ INCLUDE device.x
     #[test]
     fn parse_plus_origin_no_units() {
         const LINKER_SCRIPT: &str = "MEMORY
-{
-  FLASH : ORIGIN = 0x08000000, LENGTH = 2M
-  RAM : ORIGIN = 0x20020000 + 1000, LENGTH = 368K
-}
+        {
+            FLASH : ORIGIN = 0x08000000, LENGTH = 2M
+            RAM : ORIGIN = 0x20020000 + 1000, LENGTH = 368K
+        }
 
-INCLUDE device.x
-";
+        INCLUDE device.x";
 
         assert_eq!(
             find_ram_in_linker_script(LINKER_SCRIPT),
@@ -514,13 +495,12 @@ INCLUDE device.x
     #[test]
     fn parse_plus_origin_m() {
         const LINKER_SCRIPT: &str = "MEMORY
-{
-  FLASH : ORIGIN = 0x08000000, LENGTH = 2M
-  RAM : ORIGIN = 0x20020000 + 100M, LENGTH = 368K
-}
+        {
+            FLASH : ORIGIN = 0x08000000, LENGTH = 2M
+            RAM : ORIGIN = 0x20020000 + 100M, LENGTH = 368K
+        }
 
-INCLUDE device.x
-";
+        INCLUDE device.x";
 
         assert_eq!(
             find_ram_in_linker_script(LINKER_SCRIPT),
@@ -541,12 +521,11 @@ INCLUDE device.x
     #[test]
     fn parse_attributes() {
         const LINKER_SCRIPT: &str = "MEMORY
-{
-    /* NOTE 1 K = 1 KiBi = 1024 bytes */
-    FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 1024K
-    RAM (xrw)  : ORIGIN = 0x20000000, LENGTH = 128K
-}
-";
+        {
+            /* NOTE 1 K = 1 KiBi = 1024 bytes */
+            FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 1024K
+            RAM (xrw)  : ORIGIN = 0x20000000, LENGTH = 128K
+        }";
 
         assert_eq!(
             find_ram_in_linker_script(LINKER_SCRIPT),
