@@ -313,7 +313,7 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
 /// Perform addition when ORIGN or LENGTH variables contain an addition.
 /// If there is no addition to be performed, it will return the `u64` value.
 fn perform_addition(line: &str) -> u64 {
-    let segments = line.split('+').map(|s| s.trim()).collect::<Vec<_>>();
+    let segments = line.split('+').map(str::trim).collect::<Vec<_>>();
 
     let mut total_length = 0;
     for segment in segments {
