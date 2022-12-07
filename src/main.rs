@@ -88,12 +88,13 @@ fn notmain() -> Result<i32> {
         let mut new_linker_script = File::create(tempdir.join(ram_linker_script.file_name()))?;
 
         for (index, line) in original_linker_script.lines().enumerate() {
-            match index == ram_entry.line {
-                true => writeln!(
+            if index == ram_entry.line {
+                writeln!(
                     new_linker_script,
                     "  RAM : ORIGIN = {new_origin:#x}, LENGTH = {new_length}"
-                )?,
-                false => writeln!(new_linker_script, "{line}")?,
+                )?
+            } else {
+                writeln!(new_linker_script, "{line}")?
             }
         }
         new_linker_script.flush()?;
