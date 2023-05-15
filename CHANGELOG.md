@@ -7,14 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-- [#xx]: CI: Switch from bors to github merge queue
+- [#77]: CI: Switch from bors to github merge queue
 - [#75]: End of year refactoring
 - [#74]: CI: Simplify
 - [#72]: CI: Install Rust manually
 - [#71]: CI: Add changelog enforcer
 - [#70]: Support addition in ORIGIN
 
-[#xx]: https://github.com/knurling-rs/flip-link/pull/xx
+[#77]: https://github.com/knurling-rs/flip-link/pull/xx
 [#75]: https://github.com/knurling-rs/flip-link/pull/75
 [#74]: https://github.com/knurling-rs/flip-link/pull/74
 [#72]: https://github.com/knurling-rs/flip-link/pull/72
