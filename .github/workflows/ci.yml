@@ -1,13 +1,13 @@
 name: CI
 
 on:
-  push:
-    branches: [main, staging, trying]
   pull_request:
     branches: [main]
   schedule:
     # runs 1 min after 2 or 1 AM (summer/winter) berlin time
     - cron: "1 0 * * *"
+  merge_group:
+
 env:
   CARGO_TERM_COLOR: always
   CORE_TARGET: thumbv7m-none-eabi # needed by `core`
@@ -72,16 +72,3 @@ jobs:
       - run: cargo clippy -- --deny warnings
       - run: cargo clippy -- --deny warnings
         working-directory: test-flip-link-app/
-
-  # Refs: https://github.com/rust-lang/crater/blob/9ab6f9697c901c4a44025cf0a39b73ad5b37d198/.github/workflows/bors.yml#L125-L149
-  # bors.tech integration
-  ci-success:
-    name: ci
-    if: success()
-    needs:
-      - static-checks
-      - test
-    runs-on: ubuntu-latest
-    steps:
-      - name: CI succeeded
-        run: exit 0
