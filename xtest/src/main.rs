@@ -1,3 +1,5 @@
+use std::process::Command;
+
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 fn main() -> Result<()> {
@@ -7,6 +9,9 @@ fn main() -> Result<()> {
     println!("\n⏳ install latest flip-link");
     cargo::install_flip_link()?;
 
+    println!("\n⚙️ install target");
+    rustup::install_target()?;
+
     println!("\n🧪 cargo test");
     cargo::test()?;
 
@@ -15,8 +20,7 @@ fn main() -> Result<()> {
 }
 
 mod cargo {
-    use super::Result;
-    use std::process::Command;
+    use super::*;
 
     pub fn clean_test_app() -> Result<()> {
         let status = Command::new("cargo")
@@ -47,6 +51,22 @@ mod cargo {
             .status()?;
         match status.success() {
             false => Err(format!("running `cargo test`").into()),
+            true => Ok(()),
+        }
+    }
+}
+
+mod rustup {
+    use super::*;
+
+    const TARGET: &str = "thumbv7m-none-eabi";
+
+    pub fn install_target() -> Result<()> {
+        let status = Command::new("rustup")
+            .args(&["target", "install", TARGET])
+            .status()?;
+        match status.success() {
+            false => Err(format!("installing target").into()),
             true => Ok(()),
         }
     }
