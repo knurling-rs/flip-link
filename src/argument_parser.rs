@@ -12,12 +12,12 @@ pub fn get_search_paths(args: &[String]) -> Vec<PathBuf> {
     args.windows(2)
         .filter_map(|x| (x[0] == "-L").then(|| PathBuf::from(&x[1])))
         .inspect(|path| log::trace!("new search path: {}", path.display()))
-        .collect::<Vec<_>>()
+        .collect()
 }
 
 /// Get `search_targets`, the names of the linker scripts, specified by `-T`
 pub fn get_search_targets(args: &[String]) -> Vec<Cow<str>> {
     args.iter()
         .filter_map(|arg| arg.strip_prefix("-T").map(Cow::Borrowed))
-        .collect::<Vec<_>>()
+        .collect()
 }
