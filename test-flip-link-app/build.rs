@@ -1,4 +1,8 @@
-fn main() -> anyhow::Result<()> {
+use std::{error::Error, result::Result as StdResult};
+
+type Result<T> = StdResult<T, Box<dyn Error>>;
+
+fn main() -> Result<()> {
     // include following if hal is excluded (aka. default features are disabled)
     #[cfg(not(feature = "lm3s6965"))]
     {
