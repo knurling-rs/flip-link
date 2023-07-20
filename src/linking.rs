@@ -19,8 +19,9 @@ pub fn link_normally(args: &[String]) -> io::Result<ExitStatus> {
 ///
 /// * `args` are arguments passed to the linker invocation
 /// * `current_dir` is the directory from which the linker was invoked
-/// * `stack_start` is the new, custom starting point from which our stack grows downwards–
-///   * this should be right *below* the `.bss+.data` region that we've moved to the top, e.g.:
+/// * `custom_linker_script_dir` is the directory in which the linker script to be used is located
+/// * `stack_start` is the new, custom starting point from which our stack grows downwards –
+///   this should be right *below* the `.bss+.data` region that we've moved to the top, e.g.:
 ///     ```
 ///      +-------------+
 ///      | .bss+.data  |
@@ -32,7 +33,6 @@ pub fn link_normally(args: &[String]) -> io::Result<ExitStatus> {
 ///      |             |
 ///      +-------------+
 ///     ```
-/// * `custom_linker_script_location` is the directory in which the linker script to be used is located
 pub fn link_modified(
     args: &[String],
     current_dir: &Path,

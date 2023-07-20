@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- [#79]: Summer cleanup
 - [#77]: CI: Switch from bors to github merge queue
 - [#75]: End of year refactoring
 - [#74]: CI: Simplify
@@ -14,7 +15,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - [#71]: CI: Add changelog enforcer
 - [#70]: Support addition in ORIGIN
 
-[#77]: https://github.com/knurling-rs/flip-link/pull/xx
+[#79]: https://github.com/knurling-rs/flip-link/pull/79
+[#77]: https://github.com/knurling-rs/flip-link/pull/77
 [#75]: https://github.com/knurling-rs/flip-link/pull/75
 [#74]: https://github.com/knurling-rs/flip-link/pull/74
 [#72]: https://github.com/knurling-rs/flip-link/pull/72
