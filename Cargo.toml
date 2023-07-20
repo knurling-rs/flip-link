@@ -14,11 +14,11 @@ readme = "README.md"
 env_logger = { version = "0.10", default-features = false }
 getrandom = "0.2"
 log = "0.4"
-object = { version = "0.30", default-features = false, features = ["read_core", "elf", "std"] }
+object = { version = "0.31", default-features = false, features = ["read_core", "elf", "std"] }
 
 [dev-dependencies]
 assert_cmd = "2.0"
-rstest = { version = "0.17", default-features = false }
+rstest = { version = "0.18", default-features = false }
 
 [workspace]
 members = [".", "xtest"]
