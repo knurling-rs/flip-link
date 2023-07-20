@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.1.7] - 2023-07-20
+
 - [#79]: Summer cleanup
 - [#77]: CI: Switch from bors to github merge queue
 - [#75]: End of year refactoring
@@ -119,7 +121,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Initial release
 
-[Unreleased]: https://github.com/knurling-rs/flip-link/compare/v0.1.5...main
+[Unreleased]: https://github.com/knurling-rs/flip-link/compare/v0.1.7...main
+[v0.1.7]: https://github.com/knurling-rs/flip-link/compare/v0.1.6...v0.1.7
+[v0.1.6]: https://github.com/knurling-rs/flip-link/compare/v0.1.5...v0.1.g
 [v0.1.5]: https://github.com/knurling-rs/flip-link/compare/v0.1.4...v0.1.5
 [v0.1.4]: https://github.com/knurling-rs/flip-link/compare/v0.1.3...v0.1.4
 [v0.1.3]: https://github.com/knurling-rs/flip-link/compare/v0.1.2...v0.1.3
