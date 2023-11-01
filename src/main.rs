@@ -402,6 +402,31 @@ mod tests {
     }
 
     #[test]
+    fn parse_comment() {
+        const LINKER_SCRIPT: &str = "MEMORY
+        {
+            FLASH : ORIGIN = 0x00000000, LENGTH = 256K
+            RAM : ORIGIN = 0x20000000, LENGTH = 64K /* This is a comment */
+        }
+
+        INCLUDE device.x";
+
+        assert_eq!(
+            find_ram_in_linker_script(LINKER_SCRIPT),
+            Some(MemoryEntry {
+                line: 3,
+                origin: 0x20000000,
+                length: 64 * 1024,
+            })
+        );
+
+        assert_eq!(
+            get_includes_from_linker_script(LINKER_SCRIPT),
+            vec!["device.x"]
+        );
+    }
+
+    #[test]
     fn test_perform_addition_hex_and_number() {
         const ADDITION: &str = "0x20000000 + 1000";
         let expected: u64 = 0x20000000 + 1000;
