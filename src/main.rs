@@ -325,12 +325,14 @@ fn perform_addition(line: &str) -> u64 {
             }
             None => (segment, None),
         };
+
         // Parse number
         let (number, radix) = match number.strip_prefix("0x") {
             Some(s) => (s, 16),
             None => (number, 10),
         };
         let length = tryc!(u64::from_str_radix(number, radix));
+
         // Handle unit
         let multiplier = match unit {
             Some('K') => 1024,

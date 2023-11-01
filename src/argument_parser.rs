@@ -10,7 +10,8 @@ pub fn get_output_path(args: &[String]) -> crate::Result<&String> {
 /// Get `search_paths`, specified by `-L`
 pub fn get_search_paths(args: &[String]) -> Vec<PathBuf> {
     args.windows(2)
-        .filter_map(|x| (x[0] == "-L").then(|| PathBuf::from(&x[1])))
+        .filter(|&x| (x[0] == "-L"))
+        .map(|x| PathBuf::from(&x[1]))
         .inspect(|path| log::trace!("new search path: {}", path.display()))
         .collect()
 }
