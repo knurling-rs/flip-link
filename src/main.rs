@@ -321,22 +321,20 @@ fn perform_addition(line: &str) -> u64 {
         let (number, unit) = match segment.find(['K', 'M']) {
             Some(unit_pos) => {
                 let (number, unit) = segment.split_at(unit_pos);
-                (number, Some(unit))
+                (number, unit.chars().next())
             }
             None => (segment, None),
         };
-
         // Parse number
         let (number, radix) = match number.strip_prefix("0x") {
             Some(s) => (s, 16),
             None => (number, 10),
         };
         let length = tryc!(u64::from_str_radix(number, radix));
-
         // Handle unit
         let multiplier = match unit {
-            Some("K") => 1024,
-            Some("M") => 1024 * 1024,
+            Some('K') => 1024,
+            Some('M') => 1024 * 1024,
             None => 1,
             _ => unreachable!(),
         };
@@ -402,7 +400,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_comment() {
+    fn ingore_comment() {
         const LINKER_SCRIPT: &str = "MEMORY
         {
             FLASH : ORIGIN = 0x00000000, LENGTH = 256K
