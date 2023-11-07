@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- [#84]: Fix for comments in linker script
+
+[#84]: https://github.com/knurling-rs/flip-link/pull/84
+
 ## [v0.1.7] - 2023-07-20
 
 - [#79]: Summer cleanup

@@ -321,7 +321,7 @@ fn perform_addition(line: &str) -> u64 {
         let (number, unit) = match segment.find(['K', 'M']) {
             Some(unit_pos) => {
                 let (number, unit) = segment.split_at(unit_pos);
-                (number, Some(unit))
+                (number, unit.chars().next())
             }
             None => (segment, None),
         };
@@ -335,8 +335,8 @@ fn perform_addition(line: &str) -> u64 {
 
         // Handle unit
         let multiplier = match unit {
-            Some("K") => 1024,
-            Some("M") => 1024 * 1024,
+            Some('K') => 1024,
+            Some('M') => 1024 * 1024,
             None => 1,
             _ => unreachable!(),
         };
@@ -382,6 +382,31 @@ mod tests {
         {
             FLASH : ORIGIN = 0x00000000, LENGTH = 262144
             RAM : ORIGIN = 0x20000000, LENGTH = 65536
+        }
+
+        INCLUDE device.x";
+
+        assert_eq!(
+            find_ram_in_linker_script(LINKER_SCRIPT),
+            Some(MemoryEntry {
+                line: 3,
+                origin: 0x20000000,
+                length: 64 * 1024,
+            })
+        );
+
+        assert_eq!(
+            get_includes_from_linker_script(LINKER_SCRIPT),
+            vec!["device.x"]
+        );
+    }
+
+    #[test]
+    fn ingore_comment() {
+        const LINKER_SCRIPT: &str = "MEMORY
+        {
+            FLASH : ORIGIN = 0x00000000, LENGTH = 256K
+            RAM : ORIGIN = 0x20000000, LENGTH = 64K /* This is a comment */
         }
 
         INCLUDE device.x";
