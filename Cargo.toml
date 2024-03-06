@@ -7,7 +7,7 @@ keywords = ["arm", "cortex-m", "stack-protection"]
 license = "MIT OR Apache-2.0"
 name = "flip-link"
 repository = "https://github.com/knurling-rs/flip-link"
-version = "0.1.7"
+version = "0.1.8"
 readme = "README.md"
 
 [dependencies]
