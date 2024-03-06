@@ -4,6 +4,7 @@ edition = "2021"
 readme = "README.md"
 name = "test-flip-link-app"
 version = "0.1.0"
+publish = false
 
 [dependencies]
 cortex-m = "0.7"
