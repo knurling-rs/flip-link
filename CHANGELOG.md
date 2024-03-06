@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- [#86]: Release v0.1.8
 - [#85]: Setup cargo-dist
 - [#84]: Fix for comments in linker script
 
+[#86]: https://github.com/knurling-rs/flip-link/pull/86
 [#85]: https://github.com/knurling-rs/flip-link/pull/85
 [#84]: https://github.com/knurling-rs/flip-link/pull/84
 
