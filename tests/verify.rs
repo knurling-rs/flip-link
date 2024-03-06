@@ -73,7 +73,7 @@ mod cargo {
         };
 
         Command::new("cargo")
-            .args(&["build", "--examples", default_features])
+            .args(["build", "--examples", default_features])
             .current_dir(firmware_dir)
             .unwrap()
             .assert()
@@ -115,8 +115,8 @@ mod elf {
             .collect::<Vec<_>>();
 
         // get highest and lowest address of all sections
-        let min = *addresses.iter().min().ok_or(format!("empty iterator"))?;
-        let max = *addresses.iter().max().ok_or(format!("empty iterator"))?;
+        let min = *addresses.iter().min().ok_or("empty iterator".to_string())?;
+        let max = *addresses.iter().max().ok_or("empty iterator".to_string())?;
 
         Ok(min..=max)
     }
@@ -154,7 +154,7 @@ mod elf {
         FILES
             .iter()
             .map(|file_name| format!("{}/target/{}/debug/examples/{}", CRATE, TARGET, file_name))
-            .map(|file_path| PathBuf::from(file_path))
+            .map(PathBuf::from)
             .collect()
     }
 }
