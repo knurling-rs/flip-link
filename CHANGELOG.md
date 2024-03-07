@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- [#90] Configure release-plz
 - [#88] Setup release-plz
 
-[#86]: https://github.com/knurling-rs/flip-link/pull/86
+[#90]: https://github.com/knurling-rs/flip-link/pull/86
+[#88]: https://github.com/knurling-rs/flip-link/pull/86
 
 ## [v0.1.8] - 2024-03-06
 
