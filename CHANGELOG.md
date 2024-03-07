@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- [#88] Setup release-plz
+
+[#86]: https://github.com/knurling-rs/flip-link/pull/86
+
+## [v0.1.8] - 2024-03-06
+
 - [#86]: Release v0.1.8
 - [#85]: Setup cargo-dist
 - [#84]: Fix for comments in linker script
@@ -129,7 +135,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Initial release
 
-[Unreleased]: https://github.com/knurling-rs/flip-link/compare/v0.1.7...main
+[Unreleased]: https://github.com/knurling-rs/flip-link/compare/v0.1.8...main
+[v0.1.7]: https://github.com/knurling-rs/flip-link/compare/v0.1.7...v0.1.8
 [v0.1.7]: https://github.com/knurling-rs/flip-link/compare/v0.1.6...v0.1.7
 [v0.1.6]: https://github.com/knurling-rs/flip-link/compare/v0.1.5...v0.1.g
 [v0.1.5]: https://github.com/knurling-rs/flip-link/compare/v0.1.4...v0.1.5
