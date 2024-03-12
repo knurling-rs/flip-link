@@ -82,6 +82,14 @@ Change the linker from `rust-lld` (the default) to `flip-link` in `.cargo/config
 ``` toml
 [target.'cfg(all(target_arch = "arm", target_os = "none"))']
 # (..)
+linker = "flip-link"
+```
+
+In versions of Cargo < 1.74, use `rustflags` to change the linker
+
+``` toml
+[target.'cfg(all(target_arch = "arm", target_os = "none"))']
+# (..)
 rustflags = [
   "-C", "linker=flip-link", # <- add this
   # (..)
