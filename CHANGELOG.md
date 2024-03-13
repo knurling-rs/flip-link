@@ -7,10 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- [#92] Recommend `target.'cfg(..)'.linker` for recent Cargo versions
 - [#90] Configure release-plz
 - [#88] Setup release-plz
 
-[#90]: https://github.com/knurling-rs/flip-link/pull/86
+[#92]: https://github.com/knurling-rs/flip-link/pull/92
+[#90]: https://github.com/knurling-rs/flip-link/pull/90
 [#88]: https://github.com/knurling-rs/flip-link/pull/86
 
 ## [v0.1.8] - 2024-03-06
