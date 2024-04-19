@@ -90,7 +90,7 @@ mod cargo {
 }
 
 mod elf {
-    use std::{convert::TryInto, ops::RangeInclusive, path::PathBuf};
+    use std::{ops::RangeInclusive, path::PathBuf};
 
     use object::{File, Object, ObjectSection, Section};
 
