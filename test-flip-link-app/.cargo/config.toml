@@ -1,4 +1,4 @@
-[target.thumbv7m-none-eabi]
+[target.thumbv7em-none-eabi]
 runner = "qemu-system-arm -cpu cortex-m3 -machine lm3s6965evb -nographic -semihosting-config enable=on,target=native -kernel"
 rustflags = [
   "-C", "linker=flip-link",
@@ -6,4 +6,4 @@ rustflags = [
 ]
 
 [build]
-target = "thumbv7m-none-eabi"
+target = "thumbv7em-none-eabi"

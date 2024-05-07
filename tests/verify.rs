@@ -7,7 +7,7 @@ const CRATE: &str = "test-flip-link-app";
 /// Example firmware in `$CRATE/examples`
 const FILES: [&str; 4] = ["crash", "exception", "hello", "panic"];
 /// Compilation target firmware is build for
-const TARGET: &str = "thumbv7m-none-eabi";
+const TARGET: &str = "thumbv7em-none-eabi";
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 

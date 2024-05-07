@@ -59,7 +59,7 @@ mod cargo {
 mod rustup {
     use super::*;
 
-    const TARGET: &str = "thumbv7m-none-eabi";
+    const TARGET: &str = "thumbv7em-none-eabi";
 
     pub fn install_target() -> Result<()> {
         let status = Command::new("rustup")

@@ -10,7 +10,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  CORE_TARGET: thumbv7m-none-eabi # needed by `core`
+  CORE_TARGET: thumbv7em-none-eabi # needed by `core`
 
 jobs:
   test:
