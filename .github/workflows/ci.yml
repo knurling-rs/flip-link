@@ -10,7 +10,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  CORE_TARGET: thumbv7m-none-eabi # needed by `core`
+  CORE_TARGET: thumbv7em-none-eabi # needed by `core`
 
 jobs:
   test:
@@ -27,7 +27,9 @@ jobs:
 
       # install Rust
       - name: Use the latest stable release
-        run: rustup update stable && rustup default stable
+        run: |
+          rustup update stable --no-self-update
+          rustup default stable
       - name: Install Rust target for cross-compilation
         run: rustup target add ${{ env.CORE_TARGET }}
 
