@@ -7,12 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- [#96] Add support for @file args
 - [#94] Refactor tests
 - [#93] Remove TryInto import (in prelude since 2021 edition)
 - [#92] Recommend `target.'cfg(..)'.linker` for recent Cargo versions
 - [#90] Configure release-plz
 - [#88] Setup release-plz
 
+[#96]: https://github.com/knurling-rs/flip-link/pull/96
 [#94]: https://github.com/knurling-rs/flip-link/pull/94
 [#93]: https://github.com/knurling-rs/flip-link/pull/93
 [#92]: https://github.com/knurling-rs/flip-link/pull/92
