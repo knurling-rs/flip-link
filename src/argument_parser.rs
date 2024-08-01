@@ -1,4 +1,9 @@
-use std::{borrow::Cow, path::PathBuf};
+use std::{
+    borrow::Cow,
+    fs::File,
+    io::{BufRead, BufReader},
+    path::PathBuf,
+};
 
 /// Get `output_path`, specified by `-o`
 pub fn get_output_path(args: &[String]) -> crate::Result<&String> {
@@ -21,4 +26,36 @@ pub fn get_search_targets(args: &[String]) -> Vec<Cow<str>> {
     args.iter()
         .filter_map(|arg| arg.strip_prefix("-T").map(Cow::Borrowed))
         .collect()
+}
+
+/// Exapnds @file arguments into the file's contents
+pub fn expand_files(args: &[String]) -> Vec<String> {
+    let mut expanded = Vec::with_capacity(args.len());
+
+    for arg in args {
+        if let Some(arg) = arg.strip_prefix('@') {
+            // The normal linker was able to open the file, so this *should* never panic
+            let file = File::open(arg).expect(&format!(
+                "Unable to open {arg}, this should never happen and should be reported"
+            ));
+            let reader = BufReader::new(file);
+            for line in reader.lines() {
+                // Same as above, normal linker succeeded so we should too
+                let line = line.expect(&format!(
+                    "Invalid file ({arg}), this should never happen and should be reported"
+                ));
+                println!("{line}");
+                // Remove quotes if they exist
+                if line.starts_with('"') && line.ends_with('"') {
+                    expanded.push(line[1..line.len() - 1].to_owned());
+                } else {
+                    expanded.push(line.to_owned());
+                }
+            }
+        } else {
+            expanded.push(arg.clone());
+        }
+    }
+
+    expanded
 }
