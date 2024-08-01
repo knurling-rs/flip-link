@@ -44,7 +44,6 @@ pub fn expand_files(args: &[String]) -> Vec<String> {
                 let line = line.expect(&format!(
                     "Invalid file ({arg}), this should never happen and should be reported"
                 ));
-                println!("{line}");
                 // Remove quotes if they exist
                 if line.starts_with('"') && line.ends_with('"') {
                     expanded.push(line[1..line.len() - 1].to_owned());
