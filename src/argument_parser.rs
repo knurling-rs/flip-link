@@ -42,7 +42,7 @@ pub fn expand_files(args: &[String]) -> Vec<String> {
             for line in reader.lines() {
                 // Same as above, normal linker succeeded so we should too
                 let line = line.expect(&format!(
-                    "Invalid file ({arg}), this should never happen and should be reported"
+                    "Invalid file {arg}, this should never happen and should be reported"
                 ));
                 // Remove quotes if they exist
                 if line.starts_with('"') && line.ends_with('"') {
