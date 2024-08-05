@@ -35,15 +35,17 @@ pub fn expand_files(args: &[String]) -> Vec<String> {
     for arg in args {
         if let Some(arg) = arg.strip_prefix('@') {
             // The normal linker was able to open the file, so this *should* never panic
-            let file = File::open(arg).expect(&format!(
-                "Unable to open {arg}, this should never happen and should be reported"
-            ));
+            let file = File::open(arg).unwrap_or_else(|e| {
+                panic!("Unable to open {arg}, this should never happen and should be reported: {e}")
+            });
             let reader = BufReader::new(file);
             for line in reader.lines() {
                 // Same as above, normal linker succeeded so we should too
-                let line = line.expect(&format!(
-                    "Invalid file {arg}, this should never happen and should be reported"
-                ));
+                let line = line.unwrap_or_else(|e| {
+                    panic!(
+                        "Invalid file {arg}, this should never happen and should be reported: {e}"
+                    )
+                });
                 // Remove quotes if they exist
                 if line.starts_with('"') && line.ends_with('"') {
                     expanded.push(line[1..line.len() - 1].to_owned());
