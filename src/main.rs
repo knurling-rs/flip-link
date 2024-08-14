@@ -27,22 +27,23 @@ fn notmain() -> Result<i32> {
     env_logger::init();
 
     // NOTE `skip` the name/path of the binary (first argument)
-    let args = env::args().skip(1).collect::<Vec<_>>();
+    let raw_args = env::args().skip(1).collect::<Vec<_>>();
 
     {
-        let exit_status = linking::link_normally(&args)?;
+        let exit_status = linking::link_normally(&raw_args)?;
         if !exit_status.success() {
             eprintln!(
                 "\nflip-link: the native linker failed to link the program normally; \
-                 please check your project configuration and linker scripts"
+                please check your project configuration and linker scripts"
             );
             return Ok(exit_status.code().unwrap_or(EXIT_CODE_FAILURE));
         }
         // if linking succeeds then linker scripts are well-formed; we'll rely on that in the parser
     }
 
+    let expanded_args = argument_parser::expand_files(&raw_args);
     let current_dir = env::current_dir()?;
-    let linker_scripts = get_linker_scripts(&args, &current_dir)?;
+    let linker_scripts = get_linker_scripts(&expanded_args, &current_dir)?;
 
     // here we assume that we'll end with the same linker script as LLD
     // I'm unsure about how LLD picks a linker script when there are multiple candidates in the
@@ -59,7 +60,7 @@ fn notmain() -> Result<i32> {
     let (ram_linker_script, ram_entry) =
         ram_path_entry.ok_or("MEMORY.RAM not found after scanning linker scripts")?;
 
-    let output_path = argument_parser::get_output_path(&args)?;
+    let output_path = argument_parser::get_output_path(&expanded_args)?;
     let elf = fs::read(output_path)?;
     let object = object::File::parse(elf.as_slice())?;
 
@@ -99,7 +100,7 @@ fn notmain() -> Result<i32> {
         }
         new_linker_script.flush()?;
 
-        let exit_status = linking::link_modified(&args, &current_dir, tempdir, new_origin)?;
+        let exit_status = linking::link_modified(&raw_args, &current_dir, tempdir, new_origin)?;
         Ok(exit_status)
     })?;
 
