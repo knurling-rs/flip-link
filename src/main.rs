@@ -29,6 +29,17 @@ fn notmain() -> Result<i32> {
     // NOTE `skip` the name/path of the binary (first argument)
     let raw_args = env::args().skip(1).collect::<Vec<_>>();
 
+    // If there's no argument provided, print the help message
+    if let None | Some("--help" | "-h") = raw_args.first().map(String::as_str) {
+        eprintln!(
+            "flip-link: adds zero-cost stack overflow protection to your \
+            embedded programs\nYou should not use flip-link directly from \
+            command line, use flip-link as your default linker instead. \n\n\
+            For detailed usage, check https://github.com/knurling-rs/flip-link"
+        );
+        return Ok(0);
+    }
+
     {
         let exit_status = linking::link_normally(&raw_args)?;
         if !exit_status.success() {
