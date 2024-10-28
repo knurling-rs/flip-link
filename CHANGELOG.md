@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- [#102] Add support for -h/--help arg and no arg
+
+[#102]: https://github.com/knurling-rs/flip-link/pull/102
+
 ## [v0.1.9] - 2024-08-14
 
 - [#96] Add support for @file args
