@@ -30,14 +30,7 @@ fn notmain() -> Result<i32> {
     let raw_args = env::args().skip(1).collect::<Vec<_>>();
 
     // If there's no argument provided, print the help message
-    if matches!(
-        raw_args
-            .iter()
-            .map(|s| s.as_str())
-            .collect::<Vec<&str>>()
-            .as_slice(),
-        [] | ["--help"] | ["-h"]
-    ) {
+    if let None | Some("--help" | "-h") = raw_args.first().map(String::as_str) {
         eprintln!(
             "flip-link: adds zero-cost stack overflow protection to your \
             embedded programs\nYou should not use flip-link directly from \
