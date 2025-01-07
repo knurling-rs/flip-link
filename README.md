@@ -103,10 +103,36 @@ NOTE that if you were using GNU `ld` or GNU `gcc` to link your program then this
 ## Testing
 
 Our CI enforces various checks. You can run them locally to make sure your PR will pass the CI:
+
 * `cargo fmt --all -- --check`
 * `cargo clippy -- --deny warnings`
 * `cargo xtest`
   * This installs the current revision of `flip-link` and runs `cargo test`.
+
+## Logging
+
+If you want to see what `flip-link` is up to, you can set these environment variables:
+
+```bash
+export RUSTC_LOG=rustc_codegen_ssa::back::link=info
+export RUST_LOG=info
+```
+
+This will produce something like:
+
+```console
+$ cargo build
+...
+ INFO rustc_codegen_ssa::back::link linker stderr:
+ [INFO  flip_link] found MemoryEntry(line=3, origin=0x20000000, length=0x10000) in ./target/thumbv7em-none-eabi/debug/build/lm3s6965-3b7087c63b161e04/out/memory.x
+ [INFO  flip_link] used RAM spans: origin=0x20000000, length=12, align=4
+ [INFO  flip_link] new RAM region: ORIGIN=0x2000fff0, LENGTH=16
+ INFO rustc_codegen_ssa::back::link linker stdout:
+ INFO rustc_codegen_ssa::back::link linker stdout:
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.08s
+```
+
+You can see even more detail about how we parse expressions using `RUST_LOG=debug`.
 
 ## Support
 

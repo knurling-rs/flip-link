@@ -63,7 +63,7 @@ fn notmain() -> Result<i32> {
     for linker_script in linker_scripts {
         let script_contents = fs::read_to_string(linker_script.path())?;
         if let Some(entry) = find_ram_in_linker_script(&script_contents) {
-            log::debug!("found {entry:?} in {}", linker_script.path().display());
+            log::info!("found {entry} in {}", linker_script.path().display());
             ram_path_entry = Some((linker_script, entry));
             break;
         }
@@ -257,6 +257,16 @@ impl MemoryEntry {
     }
 }
 
+impl std::fmt::Display for MemoryEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "MemoryEntry(line={}, origin=0x{:08x}, length=0x{:x})",
+            self.line, self.origin, self.length
+        )
+    }
+}
+
 /// Rm `token` from beginning of `line`, else `continue` loop iteration
 macro_rules! eat {
     ($line:expr, $token:expr) => {
@@ -303,14 +313,14 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
         line = eat!(line, '=');
 
         let boundary_pos = tryc!(line.find(',').ok_or(()));
-        let origin = perform_addition(&line[..boundary_pos]);
+        let origin = evalulate_expression(&line[..boundary_pos]) as u64;
         line = line[boundary_pos..].trim();
 
         line = eat!(line, ',');
         line = eat!(line, "LENGTH");
         line = eat!(line, '=');
 
-        let length = perform_addition(line);
+        let length = evalulate_expression(line) as u64;
 
         return Some(MemoryEntry {
             line: index,
@@ -322,41 +332,76 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
     None
 }
 
-/// Perform addition when ORIGN or LENGTH variables contain an addition.
-/// If there is no addition to be performed, it will return the `u64` value.
-fn perform_addition(line: &str) -> u64 {
-    let segments = line.split('+').map(str::trim).collect::<Vec<_>>();
+/// Parse an integer, with an optional multiplication suffix
+fn parse_integer(input: &str) -> Option<u64> {
+    log::debug!("Parsing {input:?}");
+    let input = input.trim();
+    let mut multiplier = 1;
+    let numeric = if let Some(n) = input.strip_suffix('K') {
+        log::debug!("Is Kibibyte");
+        multiplier = 1024;
+        n
+    } else if let Some(n) = input.strip_suffix('M') {
+        log::debug!("Is Mebibyte");
+        multiplier = 1024 * 1024;
+        n
+    } else if let Some(n) = input.strip_suffix('G') {
+        log::debug!("Is Gibibyte");
+        multiplier = 1024 * 1024 * 1024;
+        n
+    } else {
+        log::debug!("No suffix");
+        input
+    };
+    log::debug!("{numeric} x {multiplier}");
 
-    let mut total_length = 0;
-    for segment in segments {
-        // Split number and the optional unit
-        let (number, unit) = match segment.find(['K', 'M']) {
-            Some(unit_pos) => {
-                let (number, unit) = segment.split_at(unit_pos);
-                (number, unit.chars().next())
-            }
-            None => (segment, None),
-        };
+    // Parse number
+    let (number, radix) = match numeric.strip_prefix("0x") {
+        Some(s) => (s, 16),
+        None => (numeric, 10),
+    };
+    let value = u64::from_str_radix(number, radix).ok()?;
 
-        // Parse number
-        let (number, radix) = match number.strip_prefix("0x") {
-            Some(s) => (s, 16),
-            None => (number, 10),
-        };
-        let length = tryc!(u64::from_str_radix(number, radix));
+    Some(value * multiplier)
+}
 
-        // Handle unit
-        let multiplier = match unit {
-            Some('K') => 1024,
-            Some('M') => 1024 * 1024,
-            None => 1,
-            _ => unreachable!(),
-        };
+/// Evaluate a linker-script expression.
+///
+/// Panics if the expression is not understood
+fn evalulate_expression(line: &str) -> i64 {
+    log::debug!("Evaluating expression {:?}", line);
 
-        // Add length
-        total_length += length * multiplier;
+    // We cannot handle '(x)' but we can handle ' ( x + 1 ) '.
+    // These extra spaces have no affect on the arithmetic; they just
+    // make it easier for us to find the suffixes
+    let line = line.replace("(", " ( ").replace(")", " ) ");
+
+    let mut processed_segments = Vec::new();
+    // deal with all the suffixes that evalexpr doesn't know
+    for segment in line.split_whitespace() {
+        // is it numeric? If so, process any suffix it has before the evaluator sees it
+        if let Some(number) = parse_integer(segment) {
+            processed_segments.push(format!("{number}"))
+        } else {
+            processed_segments.push(segment.to_string());
+        }
     }
-    total_length
+
+    log::debug!("Split expression into {processed_segments:?}");
+    let processed_string = processed_segments.join(" ");
+    let value = match evalexpr::eval(&processed_string) {
+        Ok(evalexpr::Value::Int(n)) => n,
+        Ok(val) => {
+            panic!("Failed to parse expression {line:?} ({processed_string:?}), got {val:?}?");
+        }
+        Err(e) => {
+            panic!("Failed to parse expression {line:?} ({processed_string:?}), got error {e:?}");
+        }
+    };
+
+    log::debug!("Evaluated expression as {:?}", value);
+
+    value
 }
 
 #[cfg(test)]
@@ -365,6 +410,7 @@ mod tests {
 
     #[test]
     fn parse() {
+        _ = env_logger::try_init();
         const LINKER_SCRIPT: &str = "MEMORY
         {
             FLASH : ORIGIN = 0x00000000, LENGTH = 256K
@@ -390,6 +436,7 @@ mod tests {
 
     #[test]
     fn parse_no_units() {
+        _ = env_logger::try_init();
         const LINKER_SCRIPT: &str = "MEMORY
         {
             FLASH : ORIGIN = 0x00000000, LENGTH = 262144
@@ -415,6 +462,7 @@ mod tests {
 
     #[test]
     fn ingore_comment() {
+        _ = env_logger::try_init();
         const LINKER_SCRIPT: &str = "MEMORY
         {
             FLASH : ORIGIN = 0x00000000, LENGTH = 256K
@@ -440,26 +488,38 @@ mod tests {
 
     #[test]
     fn test_perform_addition_hex_and_number() {
+        _ = env_logger::try_init();
         const ADDITION: &str = "0x20000000 + 1000";
-        let expected: u64 = 0x20000000 + 1000;
+        let expected: i64 = 0x20000000 + 1000;
 
-        assert_eq!(perform_addition(ADDITION), expected);
+        assert_eq!(evalulate_expression(ADDITION), expected);
+    }
+
+    #[test]
+    fn test_perform_complex_maths() {
+        _ = env_logger::try_init();
+        const ADDITION: &str = "(0x20000000 + 1K) - 512";
+        let expected: i64 = 0x20000000 + 512;
+
+        assert_eq!(evalulate_expression(ADDITION), expected);
     }
 
     #[test]
     fn test_perform_addition_returns_number() {
+        _ = env_logger::try_init();
         const NO_ADDITION: &str = "0x20000000";
-        let expected: u64 = 536870912; //0x20000000 base 10
+        let expected: i64 = 0x20000000;
 
-        assert_eq!(perform_addition(NO_ADDITION), expected);
+        assert_eq!(evalulate_expression(NO_ADDITION), expected);
     }
 
     #[test]
     fn parse_plus() {
+        _ = env_logger::try_init();
         const LINKER_SCRIPT: &str = "MEMORY
         {
             FLASH : ORIGIN = 0x08000000, LENGTH = 2M
-            RAM : ORIGIN = 0x20020000, LENGTH = 368K + 16K
+            RAM : ORIGIN = 0x20000000 + 0x20000, LENGTH = 512K - 256K
         }
 
         INCLUDE device.x";
@@ -469,7 +529,7 @@ mod tests {
             Some(MemoryEntry {
                 line: 3,
                 origin: 0x20020000,
-                length: (368 + 16) * 1024,
+                length: (512 - 256) * 1024,
             })
         );
 
@@ -481,6 +541,7 @@ mod tests {
 
     #[test]
     fn parse_plus_origin_k() {
+        _ = env_logger::try_init();
         const LINKER_SCRIPT: &str = "MEMORY
         {
             FLASH : ORIGIN = 0x08000000, LENGTH = 2M
@@ -506,6 +567,7 @@ mod tests {
 
     #[test]
     fn parse_plus_origin_no_units() {
+        _ = env_logger::try_init();
         const LINKER_SCRIPT: &str = "MEMORY
         {
             FLASH : ORIGIN = 0x08000000, LENGTH = 2M
@@ -531,6 +593,7 @@ mod tests {
 
     #[test]
     fn parse_plus_origin_m() {
+        _ = env_logger::try_init();
         const LINKER_SCRIPT: &str = "MEMORY
         {
             FLASH : ORIGIN = 0x08000000, LENGTH = 2M
@@ -557,6 +620,7 @@ mod tests {
     // test attributes https://sourceware.org/binutils/docs/ld/MEMORY.html
     #[test]
     fn parse_attributes() {
+        _ = env_logger::try_init();
         const LINKER_SCRIPT: &str = "MEMORY
         {
             /* NOTE 1 K = 1 KiBi = 1024 bytes */

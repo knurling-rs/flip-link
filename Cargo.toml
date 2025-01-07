@@ -12,6 +12,7 @@ readme = "README.md"
 
 [dependencies]
 env_logger = { version = "0.11", default-features = false }
+evalexpr = "12.0.2"
 getrandom = "0.2"
 log = "0.4"
 object = { version = "0.35", default-features = false, features = ["read_core", "elf", "std"] }

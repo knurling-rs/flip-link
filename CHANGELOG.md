@@ -8,8 +8,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 - [#102] Add support for -h/--help arg and no arg
+- [xxx] Add a full expression parser for ORIGIN and LENGTH
 
 [#102]: https://github.com/knurling-rs/flip-link/pull/102
+[xxx]: https://github.com/knurling-rs/flip-link/pull/xxx
 
 ## [v0.1.9] - 2024-08-14
 
