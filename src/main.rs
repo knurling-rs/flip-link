@@ -332,74 +332,29 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
     None
 }
 
-/// Parse an integer, with an optional multiplication suffix
-fn parse_integer(input: &str) -> Option<u64> {
-    log::debug!("Parsing {input:?}");
-    let input = input.trim();
-    let mut multiplier = 1;
-    let numeric = if let Some(n) = input.strip_suffix('K') {
-        log::debug!("Is Kibibyte");
-        multiplier = 1024;
-        n
-    } else if let Some(n) = input.strip_suffix('M') {
-        log::debug!("Is Mebibyte");
-        multiplier = 1024 * 1024;
-        n
-    } else if let Some(n) = input.strip_suffix('G') {
-        log::debug!("Is Gibibyte");
-        multiplier = 1024 * 1024 * 1024;
-        n
-    } else {
-        log::debug!("No suffix");
-        input
-    };
-    log::debug!("{numeric} x {multiplier}");
-
-    // Parse number
-    let (number, radix) = match numeric.strip_prefix("0x") {
-        Some(s) => (s, 16),
-        None => (numeric, 10),
-    };
-    let value = u64::from_str_radix(number, radix).ok()?;
-
-    Some(value * multiplier)
-}
-
 /// Evaluate a linker-script expression.
 ///
 /// Panics if the expression is not understood
 fn evalulate_expression(line: &str) -> i64 {
     log::debug!("Evaluating expression {:?}", line);
 
-    // We cannot handle '(x)' but we can handle ' ( x + 1 ) '.
-    // These extra spaces have no affect on the arithmetic; they just
-    // make it easier for us to find the suffixes
-    let line = line.replace("(", " ( ").replace(")", " ) ");
+    let line = line.replace("K", "*1024");
+    let line = line.replace("M", "*(1024*1024)");
+    let line = line.replace("G", "*(1024*1024*1024)");
 
-    let mut processed_segments = Vec::new();
-    // deal with all the suffixes that evalexpr doesn't know
-    for segment in line.split_whitespace() {
-        // is it numeric? If so, process any suffix it has before the evaluator sees it
-        if let Some(number) = parse_integer(segment) {
-            processed_segments.push(format!("{number}"))
-        } else {
-            processed_segments.push(segment.to_string());
-        }
-    }
+    log::debug!("Now evaluating unpacked expression {:?}", line);
 
-    log::debug!("Split expression into {processed_segments:?}");
-    let processed_string = processed_segments.join(" ");
-    let value = match evalexpr::eval(&processed_string) {
+    let value = match evalexpr::eval(&line) {
         Ok(evalexpr::Value::Int(n)) => n,
         Ok(val) => {
-            panic!("Failed to parse expression {line:?} ({processed_string:?}), got {val:?}?");
+            panic!("Failed to parse expression {line:?} ({line:?}), got {val:?}?");
         }
         Err(e) => {
-            panic!("Failed to parse expression {line:?} ({processed_string:?}), got error {e:?}");
+            panic!("Failed to parse expression {line:?} ({line:?}), got error {e:?}");
         }
     };
 
-    log::debug!("Evaluated expression as {:?}", value);
+    log::debug!("Evaluated expression as 0x{:x?}", value);
 
     value
 }
@@ -498,7 +453,7 @@ mod tests {
     #[test]
     fn test_perform_complex_maths() {
         _ = env_logger::try_init();
-        const ADDITION: &str = "(0x20000000 + 1K) - 512";
+        const ADDITION: &str = "(0x20000000+1K)-512";
         let expected: i64 = 0x20000000 + 512;
 
         assert_eq!(evalulate_expression(ADDITION), expected);
