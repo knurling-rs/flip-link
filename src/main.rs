@@ -313,14 +313,14 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
         line = eat!(line, '=');
 
         let boundary_pos = tryc!(line.find(',').ok_or(()));
-        let origin = evalulate_expression(&line[..boundary_pos]) as u64;
+        let origin = evaluate_expression(&line[..boundary_pos]) as u64;
         line = line[boundary_pos..].trim();
 
         line = eat!(line, ',');
         line = eat!(line, "LENGTH");
         line = eat!(line, '=');
 
-        let length = evalulate_expression(line) as u64;
+        let length = evaluate_expression(line) as u64;
 
         return Some(MemoryEntry {
             line: index,
@@ -335,7 +335,7 @@ fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
 /// Evaluate a linker-script expression.
 ///
 /// Panics if the expression is not understood
-fn evalulate_expression(line: &str) -> i64 {
+fn evaluate_expression(line: &str) -> i64 {
     log::debug!("Evaluating expression {:?}", line);
 
     let line = line.replace("K", "*1024");
@@ -354,7 +354,7 @@ fn evalulate_expression(line: &str) -> i64 {
         }
     };
 
-    log::debug!("Evaluated expression as 0x{:x?}", value);
+    log::debug!("Evaluated expression as {:#x}", value);
 
     value
 }
@@ -447,7 +447,7 @@ mod tests {
         const ADDITION: &str = "0x20000000 + 1000";
         let expected: i64 = 0x20000000 + 1000;
 
-        assert_eq!(evalulate_expression(ADDITION), expected);
+        assert_eq!(evaluate_expression(ADDITION), expected);
     }
 
     #[test]
@@ -456,7 +456,7 @@ mod tests {
         const ADDITION: &str = "(0x20000000+1K)-512";
         let expected: i64 = 0x20000000 + 512;
 
-        assert_eq!(evalulate_expression(ADDITION), expected);
+        assert_eq!(evaluate_expression(ADDITION), expected);
     }
 
     #[test]
@@ -465,7 +465,7 @@ mod tests {
         const NO_ADDITION: &str = "0x20000000";
         let expected: i64 = 0x20000000;
 
-        assert_eq!(evalulate_expression(NO_ADDITION), expected);
+        assert_eq!(evaluate_expression(NO_ADDITION), expected);
     }
 
     #[test]
