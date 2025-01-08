@@ -8,8 +8,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 - [#109] Don't cache, because it is slow
+- [#108] CI: Update cargo-dist to v0.1.27
 
 [#109]: https://github.com/knurling-rs/flip-link/pull/109
+[#108]: https://github.com/knurling-rs/flip-link/pull/107
 
 ## [v0.1.10] - 2025-01-08
 
