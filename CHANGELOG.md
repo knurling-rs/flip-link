@@ -7,9 +7,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-- [#107] CI: Update cargo-dist to v0.1.27
+- [#108] CI: Update cargo-dist to v0.1.27
 
-[#107]: https://github.com/knurling-rs/flip-link/pull/107
+[#108]: https://github.com/knurling-rs/flip-link/pull/107
 
 ## [v0.1.10] - 2025-01-08
 
