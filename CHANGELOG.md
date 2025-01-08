@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - [#104] Add a full expression parser for ORIGIN and LENGTH
 
 [#102]: https://github.com/knurling-rs/flip-link/pull/102
-[#104]: https://github.com/knurling-rs/flip-link/pull/xxx
+[#104]: https://github.com/knurling-rs/flip-link/pull/104
 
 ## [v0.1.9] - 2024-08-14
 
