@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.1.10] - 2025-01-08
+
 - [#102] Add support for -h/--help arg and no arg
 - [#104] Add a full expression parser for ORIGIN and LENGTH
 
@@ -153,7 +155,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Initial release
 
-[Unreleased]: https://github.com/knurling-rs/flip-link/compare/v0.1.9...main
+[Unreleased]: https://github.com/knurling-rs/flip-link/compare/v0.1.10...main
+[v0.1.10]: https://github.com/knurling-rs/flip-link/compare/v0.1.9...v0.1.10
 [v0.1.9]: https://github.com/knurling-rs/flip-link/compare/v0.1.8...v0.1.9
 [v0.1.8]: https://github.com/knurling-rs/flip-link/compare/v0.1.7...v0.1.8
 [v0.1.7]: https://github.com/knurling-rs/flip-link/compare/v0.1.6...v0.1.7
