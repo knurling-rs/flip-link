@@ -7,9 +7,14 @@ use cortex_m_semihosting::{debug, hprintln};
 use lm3s6965 as _;
 use panic_semihosting as _;
 
+static X: core::sync::atomic::AtomicU32 = core::sync::atomic::AtomicU32::new(0);
+
 #[entry]
 fn main() -> ! {
-    hprintln!("Hello, world!");
+    hprintln!(
+        "Hello, world!, X = {}",
+        X.load(core::sync::atomic::Ordering::Relaxed)
+    );
 
     // exit QEMU
     // NOTE do not run this on hardware; it can corrupt OpenOCD state
