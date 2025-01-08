@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- [#108] CI: Update cargo-dist to v0.1.27
+
+[#108]: https://github.com/knurling-rs/flip-link/pull/107
+
 ## [v0.1.10] - 2025-01-08
 
 - [#102] Add support for -h/--help arg and no arg
