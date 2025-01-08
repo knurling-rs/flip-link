@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- [#109] Don't cache, because it is slow
+
+[#109]: https://github.com/knurling-rs/flip-link/pull/109
+
 ## [v0.1.10] - 2025-01-08
 
 - [#102] Add support for -h/--help arg and no arg
