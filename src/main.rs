@@ -13,6 +13,8 @@ use std::{
 
 use object::{elf, Object as _, ObjectSection, SectionFlags};
 
+use regex::Regex;
+
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 const EXIT_CODE_FAILURE: i32 = 1;
@@ -299,6 +301,20 @@ fn get_includes_from_linker_script(linker_script: &str) -> Vec<&str> {
 /// Looks for "RAM : ORIGIN = $origin, LENGTH = $length"
 // FIXME this is a dumb line-by-line parser
 fn find_ram_in_linker_script(linker_script: &str) -> Option<MemoryEntry> {
+    let linker_script = {
+        // Remove any multiline-style comments (/*...*/) in the linker script before processing.
+        // Comments within one line get replaced by an empty string.
+        // Comments that span multiple lines get replaced by newlines, in order to keep the final entry
+        // line index correct, within the original linker script.
+        let re = Regex::new(r"(?s)/\*.*?\*/").unwrap();
+        let mut stripped_linker_script = linker_script.to_string();
+        for m in re.find_iter(linker_script) {
+            stripped_linker_script = stripped_linker_script
+                .replace(m.as_str(), &"\n".repeat(m.as_str().lines().count() - 1));
+        }
+        stripped_linker_script
+    };
+
     for (index, mut line) in linker_script.lines().enumerate() {
         line = line.trim();
         line = eat!(line, "RAM");
