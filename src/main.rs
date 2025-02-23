@@ -416,7 +416,7 @@ mod tests {
     }
 
     #[test]
-    fn ingore_comment() {
+    fn ignore_comment() {
         _ = env_logger::try_init();
         const LINKER_SCRIPT: &str = "MEMORY
         {
