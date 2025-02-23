@@ -16,6 +16,7 @@ evalexpr = "12"
 getrandom = "0.2"
 log = "0.4"
 object = { version = "0.35", default-features = false, features = ["read_core", "elf", "std"] }
+regex = "1.11"
 
 [dev-dependencies]
 assert_cmd = "2.0"
