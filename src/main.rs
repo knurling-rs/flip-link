@@ -442,6 +442,35 @@ mod tests {
     }
 
     #[test]
+    fn ignore_multiline_comment() {
+        _ = env_logger::try_init();
+        const LINKER_SCRIPT: &str = "MEMORY
+        {
+            /* This is a single line comment /*
+            FLASH : ORIGIN = 0x00000000, LENGTH = 256K
+            /* This is a multiline comment
+            RAM : ORIGIN = 0x20000000, LENGTH = 64K */
+            RAM : ORIGIN = 0x20000000, /* This is a bit much... */ LENGTH = 64K
+        }
+
+        INCLUDE device.x";
+
+        assert_eq!(
+            find_ram_in_linker_script(LINKER_SCRIPT),
+            Some(MemoryEntry {
+                line: 6,
+                origin: 0x20000000,
+                length: 64 * 1024,
+            })
+        );
+
+        assert_eq!(
+            get_includes_from_linker_script(LINKER_SCRIPT),
+            vec!["device.x"]
+        );
+    }
+
+    #[test]
     fn test_perform_addition_hex_and_number() {
         _ = env_logger::try_init();
         const ADDITION: &str = "0x20000000 + 1000";
