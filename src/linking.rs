@@ -4,7 +4,7 @@ use std::{
     process::{Command, ExitStatus},
 };
 
-const LINKER: &str = "rust-lld";
+pub const LINKER: &str = "rust-lld";
 
 /// Normal linking with just the arguments the user provides
 pub fn link_normally(args: &[String]) -> io::Result<ExitStatus> {
