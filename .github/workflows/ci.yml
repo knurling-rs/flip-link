@@ -53,3 +53,14 @@ jobs:
       - run: cargo clippy -- --deny warnings
       - run: cargo clippy -- --deny warnings
         working-directory: test-flip-link-app/
+
+  ci-success:
+    name: CI finished successfully
+    runs-on: ubuntu-latest
+    if: success()
+    needs:
+        - test
+        - static-checks
+    steps:
+        - name: Mark the build as successful
+          run: exit 0
