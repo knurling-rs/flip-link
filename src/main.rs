@@ -5,7 +5,7 @@ use std::{
     borrow::Cow,
     env,
     fs::{self, File},
-    io::Write,
+    io::{ErrorKind::NotFound, Write},
     ops::RangeInclusive,
     path::{Path, PathBuf},
     process,
@@ -41,7 +41,19 @@ fn notmain() -> Result<i32> {
     }
 
     {
-        let exit_status = linking::link_normally(&raw_args)?;
+        let exit_status = match linking::link_normally(&raw_args) {
+            Ok(status) => status,
+            Err(e) => {
+                if e.kind() == NotFound {
+                    eprintln!(
+                        "flip-link: Could not find the default linker ({}) in your path",
+                        linking::LINKER
+                    );
+                }
+                Err(Box::new(e))
+            }?,
+        };
+
         if !exit_status.success() {
             eprintln!(
                 "\nflip-link: the native linker failed to link the program normally; \
@@ -111,7 +123,19 @@ fn notmain() -> Result<i32> {
         }
         new_linker_script.flush()?;
 
-        let exit_status = linking::link_modified(&raw_args, &current_dir, tempdir, new_origin)?;
+        let exit_status = match linking::link_modified(&raw_args, &current_dir, tempdir, new_origin)
+        {
+            Ok(status) => status,
+            Err(e) => {
+                if e.kind() == NotFound {
+                    eprintln!(
+                        "flip-link: Could not find the default linker ({}) in your path",
+                        linking::LINKER
+                    );
+                }
+                Err(Box::new(e))
+            }?,
+        };
         Ok(exit_status)
     })?;
 
