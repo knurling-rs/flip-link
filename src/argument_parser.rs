@@ -28,7 +28,7 @@ pub fn get_search_targets(args: &[String]) -> Vec<Cow<str>> {
         .collect()
 }
 
-/// Exapnds @file arguments into the file's contents
+/// Expands @file arguments into the file's contents
 pub fn expand_files(args: &[String]) -> Vec<String> {
     let mut expanded = Vec::with_capacity(args.len());
 
