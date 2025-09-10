@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - [#118] Handle case where rust-lld is not in path
 - [#109] Don't cache, because it is slow
 - [#108] CI: Update cargo-dist to v0.1.27
+- [#122] Fix some lints triggering on newer compilers
 
 [#118]: https://github.com/knurling-rs/flip-link/pull/118
 [#109]: https://github.com/knurling-rs/flip-link/pull/109

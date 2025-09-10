@@ -15,14 +15,14 @@ pub fn get_output_path(args: &[String]) -> crate::Result<&String> {
 /// Get `search_paths`, specified by `-L`
 pub fn get_search_paths(args: &[String]) -> Vec<PathBuf> {
     args.windows(2)
-        .filter(|&x| (x[0] == "-L"))
+        .filter(|&x| x[0] == "-L")
         .map(|x| PathBuf::from(&x[1]))
         .inspect(|path| log::trace!("new search path: {}", path.display()))
         .collect()
 }
 
 /// Get `search_targets`, the names of the linker scripts, specified by `-T`
-pub fn get_search_targets(args: &[String]) -> Vec<Cow<str>> {
+pub fn get_search_targets(args: &[String]) -> Vec<Cow<'_, str>> {
     args.iter()
         .filter_map(|arg| arg.strip_prefix("-T").map(Cow::Borrowed))
         .collect()
