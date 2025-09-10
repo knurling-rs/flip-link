@@ -166,7 +166,7 @@ fn in_tempdir<T>(callback: impl FnOnce(&Path) -> Result<T>) -> Result<T> {
 }
 
 /// Returns `(used_ram_length, used_ram_align)`
-fn compute_span_of_ram_sections(ram_entry: MemoryEntry, object: object::File) -> (u64, u64) {
+fn compute_span_of_ram_sections(ram_entry: MemoryEntry, object: object::File<'_>) -> (u64, u64) {
     let mut used_ram_start = u64::MAX;
     let mut used_ram_end = 0;
     let mut used_ram_align = 0;
