@@ -123,8 +123,13 @@ fn notmain() -> Result<i32> {
         }
         new_linker_script.flush()?;
 
-        let exit_status = match linking::link_modified(&raw_args, &current_dir, tempdir, new_origin)
-        {
+        let exit_status = match linking::link_modified(
+            &raw_args,
+            &current_dir,
+            tempdir,
+            new_origin,
+            ram_entry.origin,
+        ) {
             Ok(status) => status,
             Err(e) => {
                 if e.kind() == NotFound {
