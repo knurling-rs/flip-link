@@ -38,6 +38,7 @@ pub fn link_modified(
     current_dir: &Path,
     custom_linker_script_dir: &Path,
     stack_start: u64,
+    stack_end: u64,
 ) -> io::Result<ExitStatus> {
     let mut c = Command::new(LINKER);
     c
@@ -48,8 +49,9 @@ pub fn link_modified(
         .arg(current_dir)
         // rest of arguments, except `-flavor gnu`
         .args(&args[2..])
-        // we need to override `_stack_start` to make the stack start below fake RAM
+        // we need to override `_stack_start` and `_stack_end` below fake RAM
         .arg(format!("--defsym=_stack_start={}", stack_start))
+        .arg(format!("--defsym=_stack_end={}", stack_end))
         // set working directory to temporary directory containing our new linker script
         // this makes sure that it takes precedence over the original one
         .current_dir(custom_linker_script_dir);
