@@ -60,7 +60,7 @@ With this flipped memory layout (pictured below) the stack cannot collide with t
 
 ## Architecture support
 
-`flip-link` is known to work with ARM Cortex-M programs that link to version `0.6.x` of the [`cortex-m-rt`] crate and are linked using the linker shipped with the Rust toolchain (LLD).
+`flip-link` is known to work with ARM Cortex-M programs that link to version `0.6.x` and `0.7.x` of the [`cortex-m-rt`] crate and are linked using the linker shipped with the Rust toolchain (LLD).
 At this time, it hasn't been tested with other architectures or runtime crates.
 
 [`cortex-m-rt`]: https://crates.io/crates/cortex-m-rt
