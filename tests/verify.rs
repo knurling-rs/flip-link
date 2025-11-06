@@ -142,9 +142,10 @@ mod elf {
 
     /// Paths to firmware binaries.
     pub(crate) fn paths() -> Vec<PathBuf> {
+        let target_dir = std::env::var("CARGO_TARGET_DIR").unwrap_or(format!("{CRATE}/target"));
         FILES
             .into_iter()
-            .map(|file_name| format!("{CRATE}/target/{TARGET}/debug/examples/{file_name}"))
+            .map(|file_name| format!("{target_dir}/{TARGET}/debug/examples/{file_name}"))
             .map(PathBuf::from)
             .collect()
     }
