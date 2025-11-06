@@ -11,11 +11,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - [#109] Don't cache, because it is slow
 - [#108] CI: Update cargo-dist to v0.1.27
 - [#122] Fix some lints triggering on newer compilers
-- [#126] Pass _stack_end to linker as well
+- [#123] Fix even more lints triggering on newer compilers
+- [#126] Pass `_stack_end` to linker as well
 
 [#118]: https://github.com/knurling-rs/flip-link/pull/118
 [#109]: https://github.com/knurling-rs/flip-link/pull/109
 [#108]: https://github.com/knurling-rs/flip-link/pull/107
+[#122]: https://github.com/knurling-rs/flip-link/pull/122
+[#123]: https://github.com/knurling-rs/flip-link/pull/123
 [#126]: https://github.com/knurling-rs/flip-link/pull/126
 
 ## [v0.1.10] - 2025-01-08

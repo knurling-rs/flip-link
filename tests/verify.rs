@@ -102,14 +102,14 @@ mod elf {
     ///
     /// It is the first 32-bit word in the `.vector_table` section,
     /// according to the "ARMv6-M Architecture Reference Manual".
-    pub(crate) fn compute_initial_sp(vector_table: &Section) -> Result<u64> {
+    pub(crate) fn compute_initial_sp(vector_table: &Section<'_, '_>) -> Result<u64> {
         let data = vector_table.uncompressed_data()?;
         let sp = u32::from_le_bytes(data[..4].try_into()?);
         Ok(sp as u64)
     }
 
     /// Get [`RangeInclusive`] from lowest to highest address of all sections
-    pub(crate) fn get_bounds(sections: &[Section]) -> Result<RangeInclusive<u64>> {
+    pub(crate) fn get_bounds(sections: &[Section<'_, '_>]) -> Result<RangeInclusive<u64>> {
         // get beginning and end of all sections
         let addresses = sections
             .iter()
