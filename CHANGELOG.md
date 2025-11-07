@@ -49,9 +49,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [v0.1.8] - 2024-03-06
 
-- [#86]: Release v0.1.8
-- [#85]: Setup cargo-dist
-- [#84]: Fix for comments in linker script
+- [#86] Release v0.1.8
+- [#85] Setup cargo-dist
+- [#84] Fix for comments in linker script
 
 [#86]: https://github.com/knurling-rs/flip-link/pull/86
 [#85]: https://github.com/knurling-rs/flip-link/pull/85
@@ -59,13 +59,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [v0.1.7] - 2023-07-20
 
-- [#79]: Summer cleanup
-- [#77]: CI: Switch from bors to github merge queue
-- [#75]: End of year refactoring
-- [#74]: CI: Simplify
-- [#72]: CI: Install Rust manually
-- [#71]: CI: Add changelog enforcer
-- [#70]: Support addition in ORIGIN
+- [#79] Summer cleanup
+- [#77] CI: Switch from bors to github merge queue
+- [#75] End of year refactoring
+- [#74] CI: Simplify
+- [#72] CI: Install Rust manually
+- [#71] CI: Add changelog enforcer
+- [#70] Support addition in ORIGIN
 
 [#79]: https://github.com/knurling-rs/flip-link/pull/79
 [#77]: https://github.com/knurling-rs/flip-link/pull/77
@@ -79,13 +79,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 
-- [#63]: Handles `memory.x` overrides by searching in the current working directory first.
+- [#63] Handles `memory.x` overrides by searching in the current working directory first.
 
 [#63]: https://github.com/knurling-rs/flip-link/pull/63
 
 ### Changed
 
-- [#60]: Update to Rust 2021 🎉. Requires Rust 1.56+ to build
+- [#60] Update to Rust 2021 🎉. Requires Rust 1.56+ to build
 
 [#60]: https://github.com/knurling-rs/flip-link/pull/60
 
