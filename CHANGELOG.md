@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [v0.1.12] - 2025-11-10
+
+- [#130] Update expired `ubuntu-20.04` build runners to `ubuntu-22.04`
+
+[#130]: https://github.com/knurling-rs/flip-link/pull/130
+
 ## [v0.1.11] - 2025-11-07
 
 - [#118] Handle case where rust-lld is not in path

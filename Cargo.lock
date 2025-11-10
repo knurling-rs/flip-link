@@ -82,7 +82,7 @@ checksum = "ae893d2d5e908b78f151ed89de3bfc272cdf6d368c7ed866942f98e24dea208a"
 
 [[package]]
 name = "flip-link"
-version = "0.1.11"
+version = "0.1.12"
 dependencies = [
  "assert_cmd",
  "env_logger",
