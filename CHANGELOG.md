@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- [#132] Remove release-plz, add note for making a release
+
+[#132]: https://github.com/knurling-rs/flip-link/pull/132
+
 ## [v0.1.12] - 2025-11-10
 
 - [#130] Update expired `ubuntu-20.04` build runners to `ubuntu-22.04`
