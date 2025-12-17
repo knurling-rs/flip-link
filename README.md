@@ -11,8 +11,8 @@ The following program, which contains no `unsafe` code block, can run into *unde
 
 ``` rust
 // static variables placed in the .bss / .data sections
-static FLAG1: AtomicBool = AtomicU32::new(false); // .bss
-static FLAG2: AtomicBool = AtomicU32::new(true);  // .data
+static FLAG1: AtomicBool = AtomicBool::new(false); // .bss
+static FLAG2: AtomicBool = AtomicBool::new(true);  // .data
 
 fn main() {
     let _x = fib(100);
