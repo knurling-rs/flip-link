@@ -58,8 +58,7 @@ mod cargo {
     #[must_use]
     pub(crate) fn build_example_firmware(default_features: bool) -> Assert {
         // append `rel_path` to the current working directory
-        let mut firmware_dir = std::env::current_dir().unwrap();
-        firmware_dir.push(CRATE);
+        let firmware_dir = env::current_dir().unwrap().join(CRATE);
 
         // disable default features or use `-v` as a no-op
         let default_features = match default_features {

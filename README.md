@@ -106,8 +106,8 @@ Our CI enforces various checks. You can run them locally to make sure your PR wi
 
 * `cargo fmt --all -- --check`
 * `cargo clippy -- --deny warnings`
-* `cargo xtest`
-  * This installs the current revision of `flip-link` and runs `cargo test`.
+* `cargo test`
+  * This requires a thumbv7em-none-eabi toolchain. Install via `rustup target add thumbv7em-none-eabi`
 
 ## Logging
 
