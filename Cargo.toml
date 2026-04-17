@@ -21,9 +21,6 @@ object = { version = "0.35", default-features = false, features = ["read_core", 
 assert_cmd = "2.0"
 rstest = { version = "0.19", default-features = false }
 
-[workspace]
-members = [".", "xtest"]
-
 # The profile that 'cargo dist' will build with
 [profile.dist]
 inherits = "release"

@@ -35,7 +35,7 @@ jobs:
 
       # run tests
       - name: Run testsuite
-        run: cargo xtest
+        run: cargo test -- --test-threads=1
 
   static-checks:
     runs-on: ubuntu-latest
