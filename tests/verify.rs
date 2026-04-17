@@ -15,9 +15,6 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 #[case::normal(true)]
 #[case::custom_linkerscript(false)]
 fn should_link_example_firmware(#[case] default_features: bool) {
-    // Arrange
-    cargo::check_flip_link();
-
     // Act
     let cmd = cargo::build_example_firmware(default_features);
 
@@ -27,9 +24,6 @@ fn should_link_example_firmware(#[case] default_features: bool) {
 
 #[test]
 fn should_verify_memory_layout() -> Result<()> {
-    // Arrange
-    cargo::check_flip_link();
-
     // Act
     cargo::build_example_firmware(true).success();
 
@@ -50,7 +44,6 @@ fn should_verify_memory_layout() -> Result<()> {
         assert!(initial_sp <= *bounds.start(),);
     }
 
-    // ---
     Ok(())
 }
 
@@ -80,15 +73,6 @@ mod cargo {
             .env("PATH", path_with_flip_link())
             .unwrap()
             .assert()
-    }
-
-    /// Check that `flip-link` is present on the system
-    pub(crate) fn check_flip_link() {
-        Command::new("which")
-            .arg("flip-link")
-            .unwrap()
-            .assert()
-            .success();
     }
 
     // Returns the PATH environment variable but with the location of our very
