@@ -55,7 +55,7 @@ fn should_verify_memory_layout() -> Result<()> {
 }
 
 mod cargo {
-    use std::process::Command;
+    use std::{env, path::Path, process::Command};
 
     use assert_cmd::{assert::Assert, prelude::*};
 
@@ -77,6 +77,7 @@ mod cargo {
         Command::new("cargo")
             .args(["build", "--examples", default_features])
             .current_dir(firmware_dir)
+            .env("PATH", path_with_flip_link())
             .unwrap()
             .assert()
     }
@@ -88,6 +89,19 @@ mod cargo {
             .unwrap()
             .assert()
             .success();
+    }
+
+    // Returns the PATH environment variable but with the location of our very
+    // own flip-link binary prepended (highest priority).
+    fn path_with_flip_link() -> String {
+        let flip_link = Path::new(env!("CARGO_BIN_EXE_flip-link"));
+        // Note: this may inadvertently include other binaries in the path.
+        // If this ever becomes an issue, create a temporary directory, copy or
+        // symlink the binary there and add that to the path.
+        let flip_link_dir = flip_link.parent().unwrap();
+
+        let path = env::var("PATH").unwrap_or_default();
+        format!("{}:{}", flip_link_dir.display(), path)
     }
 }
 
