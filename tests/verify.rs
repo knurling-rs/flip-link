@@ -48,7 +48,13 @@ fn should_verify_memory_layout() -> Result<()> {
 }
 
 mod cargo {
-    use std::{env, path::Path, process::Command};
+    use std::{
+        env::{self, join_paths, split_paths},
+        ffi::OsString,
+        iter::once,
+        path::Path,
+        process::Command,
+    };
 
     use assert_cmd::{assert::Assert, prelude::*};
 
@@ -76,7 +82,7 @@ mod cargo {
 
     // Returns the PATH environment variable but with the location of our very
     // own flip-link binary prepended (highest priority).
-    fn path_with_flip_link() -> String {
+    fn path_with_flip_link() -> OsString {
         let flip_link = Path::new(env!("CARGO_BIN_EXE_flip-link"));
         // Note: this may inadvertently include other binaries in the path.
         // If this ever becomes an issue, create a temporary directory, copy or
@@ -84,7 +90,10 @@ mod cargo {
         let flip_link_dir = flip_link.parent().unwrap();
 
         let path = env::var("PATH").unwrap_or_default();
-        format!("{}:{}", flip_link_dir.display(), path)
+        let old_paths = split_paths(&path);
+        let new_paths = once(flip_link_dir.into()).chain(old_paths);
+
+        join_paths(new_paths).expect("failed to join PATH elements")
     }
 }
 
