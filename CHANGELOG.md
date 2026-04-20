@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+- [#138] Use $CARGO
 - [#137] Pure cargo tests
 - [#132] Remove release-plz, add note for making a release
 
+[#138]: https://github.com/knurling-rs/flip-link/pull/138
 [#137]: https://github.com/knurling-rs/flip-link/pull/137
 [#132]: https://github.com/knurling-rs/flip-link/pull/132
 
