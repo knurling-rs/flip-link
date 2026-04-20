@@ -72,7 +72,7 @@ mod cargo {
             true => "-v",
         };
 
-        Command::new("cargo")
+        Command::new(env!("CARGO"))
             .args(["build", "--examples", default_features])
             .current_dir(firmware_dir)
             .env("PATH", path_with_flip_link())
