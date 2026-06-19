@@ -462,7 +462,7 @@ mod tests {
         _ = env_logger::try_init();
         const LINKER_SCRIPT: &str = "MEMORY
         {
-            /* This is a single line comment /*
+            /* This is a single line comment */
             FLASH : ORIGIN = 0x00000000, LENGTH = 256K
             /* This is a multiline comment
             RAM : ORIGIN = 0x20000000, LENGTH = 64K */
