@@ -11,8 +11,8 @@ The following program, which contains no `unsafe` code block, can run into *unde
 
 ``` rust
 // static variables placed in the .bss / .data sections
-static FLAG1: AtomicBool = AtomicU32::new(false); // .bss
-static FLAG2: AtomicBool = AtomicU32::new(true);  // .data
+static FLAG1: AtomicBool = AtomicBool::new(false); // .bss
+static FLAG2: AtomicBool = AtomicBool::new(true);  // .data
 
 fn main() {
     let _x = fib(100);
@@ -60,7 +60,7 @@ With this flipped memory layout (pictured below) the stack cannot collide with t
 
 ## Architecture support
 
-`flip-link` is known to work with ARM Cortex-M programs that link to version `0.6.x` of the [`cortex-m-rt`] crate and are linked using the linker shipped with the Rust toolchain (LLD).
+`flip-link` is known to work with ARM Cortex-M programs that link to version `0.6.x` and `0.7.x` of the [`cortex-m-rt`] crate and are linked using the linker shipped with the Rust toolchain (LLD).
 At this time, it hasn't been tested with other architectures or runtime crates.
 
 [`cortex-m-rt`]: https://crates.io/crates/cortex-m-rt
@@ -106,8 +106,8 @@ Our CI enforces various checks. You can run them locally to make sure your PR wi
 
 * `cargo fmt --all -- --check`
 * `cargo clippy -- --deny warnings`
-* `cargo xtest`
-  * This installs the current revision of `flip-link` and runs `cargo test`.
+* `cargo test -- --test-threads=1`
+  * This requires a thumbv7em-none-eabi toolchain. Install via `rustup target add thumbv7em-none-eabi`
 
 ## Logging
 

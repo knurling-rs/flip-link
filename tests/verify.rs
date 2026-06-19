@@ -15,9 +15,6 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 #[case::normal(true)]
 #[case::custom_linkerscript(false)]
 fn should_link_example_firmware(#[case] default_features: bool) {
-    // Arrange
-    cargo::check_flip_link();
-
     // Act
     let cmd = cargo::build_example_firmware(default_features);
 
@@ -27,9 +24,6 @@ fn should_link_example_firmware(#[case] default_features: bool) {
 
 #[test]
 fn should_verify_memory_layout() -> Result<()> {
-    // Arrange
-    cargo::check_flip_link();
-
     // Act
     cargo::build_example_firmware(true).success();
 
@@ -50,12 +44,17 @@ fn should_verify_memory_layout() -> Result<()> {
         assert!(initial_sp <= *bounds.start(),);
     }
 
-    // ---
     Ok(())
 }
 
 mod cargo {
-    use std::process::Command;
+    use std::{
+        env::{self, join_paths, split_paths},
+        ffi::OsString,
+        iter::once,
+        path::Path,
+        process::Command,
+    };
 
     use assert_cmd::{assert::Assert, prelude::*};
 
@@ -65,8 +64,7 @@ mod cargo {
     #[must_use]
     pub(crate) fn build_example_firmware(default_features: bool) -> Assert {
         // append `rel_path` to the current working directory
-        let mut firmware_dir = std::env::current_dir().unwrap();
-        firmware_dir.push(CRATE);
+        let firmware_dir = env::current_dir().unwrap().join(CRATE);
 
         // disable default features or use `-v` as a no-op
         let default_features = match default_features {
@@ -74,20 +72,28 @@ mod cargo {
             true => "-v",
         };
 
-        Command::new("cargo")
+        Command::new(env!("CARGO"))
             .args(["build", "--examples", default_features])
             .current_dir(firmware_dir)
+            .env("PATH", path_with_flip_link())
             .unwrap()
             .assert()
     }
 
-    /// Check that `flip-link` is present on the system
-    pub(crate) fn check_flip_link() {
-        Command::new("which")
-            .arg("flip-link")
-            .unwrap()
-            .assert()
-            .success();
+    // Returns the PATH environment variable but with the location of our very
+    // own flip-link binary prepended (highest priority).
+    fn path_with_flip_link() -> OsString {
+        let flip_link = Path::new(env!("CARGO_BIN_EXE_flip-link"));
+        // Note: this may inadvertently include other binaries in the path.
+        // If this ever becomes an issue, create a temporary directory, copy or
+        // symlink the binary there and add that to the path.
+        let flip_link_dir = flip_link.parent().unwrap();
+
+        let path = env::var("PATH").unwrap_or_default();
+        let old_paths = split_paths(&path);
+        let new_paths = once(flip_link_dir.into()).chain(old_paths);
+
+        join_paths(new_paths).expect("failed to join PATH elements")
     }
 }
 
@@ -102,14 +108,14 @@ mod elf {
     ///
     /// It is the first 32-bit word in the `.vector_table` section,
     /// according to the "ARMv6-M Architecture Reference Manual".
-    pub(crate) fn compute_initial_sp(vector_table: &Section) -> Result<u64> {
+    pub(crate) fn compute_initial_sp(vector_table: &Section<'_, '_>) -> Result<u64> {
         let data = vector_table.uncompressed_data()?;
         let sp = u32::from_le_bytes(data[..4].try_into()?);
         Ok(sp as u64)
     }
 
     /// Get [`RangeInclusive`] from lowest to highest address of all sections
-    pub(crate) fn get_bounds(sections: &[Section]) -> Result<RangeInclusive<u64>> {
+    pub(crate) fn get_bounds(sections: &[Section<'_, '_>]) -> Result<RangeInclusive<u64>> {
         // get beginning and end of all sections
         let addresses = sections
             .iter()
@@ -142,9 +148,10 @@ mod elf {
 
     /// Paths to firmware binaries.
     pub(crate) fn paths() -> Vec<PathBuf> {
+        let target_dir = std::env::var("CARGO_TARGET_DIR").unwrap_or(format!("{CRATE}/target"));
         FILES
             .into_iter()
-            .map(|file_name| format!("{CRATE}/target/{TARGET}/debug/examples/{file_name}"))
+            .map(|file_name| format!("{target_dir}/{TARGET}/debug/examples/{file_name}"))
             .map(PathBuf::from)
             .collect()
     }
