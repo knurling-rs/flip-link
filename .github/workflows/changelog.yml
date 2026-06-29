@@ -20,7 +20,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Check that changelog updated
-        uses: dangoslen/changelog-enforcer@v3
+        uses: dangoslen/changelog-enforcer@v3.7
         with:
           changeLogPath: CHANGELOG.md
           skipLabels: "skip-changelog"
