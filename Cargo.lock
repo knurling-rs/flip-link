@@ -90,6 +90,7 @@ dependencies = [
  "getrandom",
  "log",
  "object",
+ "regex",
  "rstest",
 ]
 
