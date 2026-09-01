@@ -87,7 +87,7 @@ fn notmain() -> Result<i32> {
     let elf = fs::read(output_path)?;
     let object = object::File::parse(elf.as_slice())?;
 
-    // TODO assert that `_stack_start == ORIGIN(RAM) + LENGTH(RAM)`
+    // TODO assert that `_stack_start` or `_stack_top` is `ORIGIN(RAM) + LENGTH(RAM)`
     // if that's not the case the user has specified a custom location for the stack; we should
     // error in that case (e.g. the stack may have been placed in CCRAM)
 
@@ -187,17 +187,27 @@ fn compute_span_of_ram_sections(ram_entry: MemoryEntry, object: object::File<'_>
                 if ram_region_span.contains(&start) && ram_region_span.contains(&end) {
                     found_a_section = true;
                     log::debug!(
-                        "{} resides in RAM",
-                        section.name().unwrap_or("nameless section")
+                        "{} resides in RAM from {:#08x} - {:#08x}",
+                        section.name().unwrap_or("nameless section"),
+                        start,
+                        end
                     );
-                    used_ram_align = used_ram_align.max(section.align());
 
-                    if used_ram_start > start {
-                        used_ram_start = start;
-                    }
+                    if size != 0 {
+                        used_ram_align = used_ram_align.max(section.align());
 
-                    if used_ram_end < end {
-                        used_ram_end = end;
+                        if used_ram_start > start {
+                            used_ram_start = start;
+                        }
+
+                        if used_ram_end < end {
+                            used_ram_end = end;
+                        }
+                    } else {
+                        log::debug!(
+                            "{} is zero-length, ignoring",
+                            section.name().unwrap_or("nameless section"),
+                        )
                     }
                 }
             }
