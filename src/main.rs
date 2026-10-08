@@ -6,7 +6,7 @@ use std::{
     env,
     fs::{self, File},
     io::{ErrorKind::NotFound, Write},
-    ops::RangeInclusive,
+    ops::Range,
     path::{Path, PathBuf},
     process,
 };
@@ -281,8 +281,8 @@ impl MemoryEntry {
         self.origin + self.length
     }
 
-    fn span(&self) -> RangeInclusive<u64> {
-        self.origin..=self.end()
+    fn span(&self) -> Range<u64> {
+        self.origin..self.end()
     }
 }
 
