@@ -11,11 +11,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - [#137] Pure cargo tests
 - [#132] Remove release-plz, add note for making a release
 - [#140] Update cargo-dist and CI action versions
+- [#142] Fix internal memory region abstraction to avoid bugs where the whole
+         RAM is determined to be used
 
 [#138]: https://github.com/knurling-rs/flip-link/pull/138
 [#137]: https://github.com/knurling-rs/flip-link/pull/137
 [#132]: https://github.com/knurling-rs/flip-link/pull/132
 [#140]: https://github.com/knurling-rs/flip-link/pull/140
+[#142]: https://github.com/knurling-rs/flip-link/pull/142
 
 ## [v0.1.12] - 2025-11-10
 
