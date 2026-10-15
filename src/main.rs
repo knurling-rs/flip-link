@@ -6,7 +6,6 @@ use std::{
     env,
     fs::{self, File},
     io::{ErrorKind::NotFound, Write},
-    ops::Range,
     path::{Path, PathBuf},
     process,
 };
@@ -175,7 +174,6 @@ fn compute_span_of_ram_sections(ram_entry: MemoryEntry, object: object::File<'_>
     let mut used_ram_start = u64::MAX;
     let mut used_ram_end = 0;
     let mut used_ram_align = 0;
-    let ram_region_span = ram_entry.span();
     let mut found_a_section = false;
     for section in object.sections() {
         if let SectionFlags::Elf { sh_flags } = section.flags() {
@@ -184,7 +182,7 @@ fn compute_span_of_ram_sections(ram_entry: MemoryEntry, object: object::File<'_>
                 let size = section.size();
                 let end = start + size;
 
-                if ram_region_span.contains(&start) && ram_region_span.contains(&end) {
+                if ram_entry.contains_section(start, size) {
                     found_a_section = true;
                     log::debug!(
                         "{} resides in RAM",
@@ -281,8 +279,11 @@ impl MemoryEntry {
         self.origin + self.length
     }
 
-    fn span(&self) -> Range<u64> {
-        self.origin..self.end()
+    /// Whether a section of `size` bytes at `start` lies in this region. Empty sections are never in it: one placed
+    /// in the next region, starting right at this region's end, must not count as used RAM. A section may end exactly
+    /// at the region's end.
+    fn contains_section(&self, start: u64, size: u64) -> bool {
+        size != 0 && start >= self.origin && start < self.end() && start + size <= self.end()
     }
 }
 
@@ -391,6 +392,27 @@ fn evaluate_expression(line: &str) -> i64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn section_in_ram() {
+        let ram = MemoryEntry {
+            line: 0,
+            origin: 0x2000_0000,
+            length: 0x8_0000,
+        };
+        // ends exactly at the end of RAM
+        assert!(ram.contains_section(0x2007_f000, 0x1000));
+        assert!(ram.contains_section(0x2000_0000, 0x8_0000));
+        // empty section in the next region, at RAM's end (#119)
+        assert!(!ram.contains_section(0x2008_0000, 0));
+        // empty section inside RAM: no RAM used
+        assert!(!ram.contains_section(0x2000_1000, 0));
+        // in the next region, or across RAM's end
+        assert!(!ram.contains_section(0x2008_0000, 0x1000));
+        assert!(!ram.contains_section(0x2007_f000, 0x2000));
+        // below RAM
+        assert!(!ram.contains_section(0x1fff_f000, 0x1000));
+    }
 
     #[test]
     fn parse() {
