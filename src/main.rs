@@ -6,6 +6,7 @@ use std::{
     env,
     fs::{self, File},
     io::{ErrorKind::NotFound, Write},
+    ops::Range,
     path::{Path, PathBuf},
     process,
 };
@@ -182,6 +183,7 @@ fn compute_span_of_ram_sections(ram_entry: MemoryEntry, object: object::File<'_>
                 let size = section.size();
                 let end = start + size;
 
+                // Sections which go past the boundary of the RAM entry are currently ignored.
                 if ram_entry.contains_section(start, size) {
                     found_a_section = true;
                     log::debug!(
@@ -279,11 +281,15 @@ impl MemoryEntry {
         self.origin + self.length
     }
 
-    /// Whether a section of `size` bytes at `start` lies in this region. Empty sections are never in it: one placed
-    /// in the next region, starting right at this region's end, must not count as used RAM. A section may end exactly
-    /// at the region's end.
+    fn span(&self) -> Range<u64> {
+        self.origin..self.end()
+    }
+
+    /// Whether a section of `size` bytes at `start` lies in this region. Empty sections are never
+    /// in it: one placed in the next region, starting right at this region's end, must not count
+    /// as used RAM. However, a section may end exactly at the region's end.
     fn contains_section(&self, start: u64, size: u64) -> bool {
-        size != 0 && start >= self.origin && start < self.end() && start + size <= self.end()
+        size != 0 && self.span().contains(&start) && start + size <= self.end()
     }
 }
 
